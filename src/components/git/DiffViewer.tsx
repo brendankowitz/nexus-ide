@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { DiffHunk } from '@/components/git/DiffHunk';
-import type { DiffFile } from '@/types';
+import { FullDiffPanel } from '@/components/git/FullDiffPanel';
+import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
 // ── Empty State ──────────────────────────────────
 
@@ -42,6 +43,7 @@ export const DiffViewer = (): React.JSX.Element => {
 
   const [diffFiles, setDiffFiles] = useState<DiffFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fullDiffEntry, setFullDiffEntry] = useState<{ file: DiffFile; hunks: DiffHunkType[] } | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [commitError, setCommitError] = useState<string | null>(null);
@@ -186,9 +188,19 @@ export const DiffViewer = (): React.JSX.Element => {
             file={file}
             activeProjectId={activeProjectId}
             onRefresh={loadDiff}
+            onOpenFullDiff={(f, hunks) => setFullDiffEntry({ file: f, hunks })}
           />
         ))}
       </div>
+
+      {/* Full-panel diff overlay */}
+      {fullDiffEntry !== null && (
+        <FullDiffPanel
+          file={fullDiffEntry.file}
+          hunks={fullDiffEntry.hunks}
+          onClose={() => setFullDiffEntry(null)}
+        />
+      )}
     </div>
   );
 };
@@ -197,12 +209,29 @@ interface DiffFileRowProps {
   file: DiffFile;
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
+  onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
 }
 
-const DiffFileRow = ({ file, activeProjectId, onRefresh }: DiffFileRowProps): React.JSX.Element => {
+const DiffFileRow = ({ file, activeProjectId, onRefresh, onOpenFullDiff }: DiffFileRowProps): React.JSX.Element => {
   const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
   const toggleDiffFile = useUIStore((s) => s.toggleDiffFile);
   const isExpanded = !!expandedFiles[file.filePath];
+
+  const [hunks, setHunks] = useState<DiffHunkType[]>(file.hunks);
+  const [loadingHunks, setLoadingHunks] = useState(false);
+
+  // Load hunks on expand when not yet fetched
+  useEffect(() => {
+    if (!isExpanded) return;
+    if (hunks.length > 0) return;
+    if (!window.nexusAPI?.git || !activeProjectId) return;
+
+    setLoadingHunks(true);
+    window.nexusAPI.git.diffHunks(activeProjectId, file.filePath)
+      .then(setHunks)
+      .catch((err: unknown) => console.error('[DiffFileRow] failed to load hunks:', err))
+      .finally(() => setLoadingHunks(false));
+  }, [isExpanded, hunks.length, activeProjectId, file.filePath]);
 
   // Split path into directory and filename
   const lastSlash = file.filePath.lastIndexOf('/');
@@ -244,6 +273,28 @@ const DiffFileRow = ({ file, activeProjectId, onRefresh }: DiffFileRowProps): Re
       }
     },
     [activeProjectId, file.filePath, onRefresh],
+  );
+
+  const handleOpenFullDiff = useCallback(
+    async (e: React.MouseEvent): Promise<void> => {
+      e.stopPropagation();
+      if (!activeProjectId || !window.nexusAPI?.git) return;
+
+      // Reuse already-loaded hunks or fetch if needed
+      if (hunks.length > 0) {
+        onOpenFullDiff(file, hunks);
+        return;
+      }
+
+      try {
+        const loaded = await window.nexusAPI.git.diffHunks(activeProjectId, file.filePath);
+        setHunks(loaded);
+        onOpenFullDiff(file, loaded);
+      } catch (err) {
+        console.error('[DiffFileRow] failed to load hunks for full diff:', err);
+      }
+    },
+    [activeProjectId, file, hunks, onOpenFullDiff],
   );
 
   return (
@@ -288,6 +339,19 @@ const DiffFileRow = ({ file, activeProjectId, onRefresh }: DiffFileRowProps): Re
           )}
         </div>
 
+        {/* Full diff panel button */}
+        <button
+          title="Open full diff"
+          onClick={(e) => { void handleOpenFullDiff(e); }}
+          className="ml-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+        >
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="0.5" y="0.5" width="8" height="8" rx="1" />
+            <polyline points="5.5,0.5 8.5,0.5 8.5,3.5" />
+            <line x1="4.5" y1="4.5" x2="8.5" y2="0.5" />
+          </svg>
+        </button>
+
         {/* Stage / Unstage toggle */}
         <StageToggle
           filePath={file.filePath}
@@ -297,9 +361,18 @@ const DiffFileRow = ({ file, activeProjectId, onRefresh }: DiffFileRowProps): Re
       </div>
 
       {/* Hunks */}
-      {isExpanded && file.hunks.length > 0 && (
+      {isExpanded && (
         <div className="border-t border-border-subtle bg-bg-void">
-          {file.hunks.map((hunk) => (
+          {loadingHunks && (
+            <div className="flex items-center gap-2 px-5 py-3">
+              <div className="h-2.5 w-2.5 animate-spin rounded-full border border-text-ghost border-t-phase-plan" />
+              <span className="font-mono text-[10px] text-text-tertiary">Loading diff...</span>
+            </div>
+          )}
+          {!loadingHunks && hunks.length === 0 && (
+            <div className="px-5 py-3 font-mono text-[10px] text-text-ghost">No changes to display</div>
+          )}
+          {hunks.map((hunk) => (
             <DiffHunk key={hunk.header} hunk={hunk} />
           ))}
         </div>
