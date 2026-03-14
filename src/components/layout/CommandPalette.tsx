@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import type { TerminalSession } from '@/types';
+import type { Branch, TerminalSession } from '@/types';
+
+const EMPTY_BRANCHES: Branch[] = [];
 
 // ── Fuzzy matching ────────────────────────────────────────────────────────────
 
@@ -63,10 +65,10 @@ export const CommandPalette = (): React.JSX.Element | null => {
   const projects = useProjectStore((s) => s.projects);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
-  const branches = useProjectStore((s) => {
-    const id = s.activeProjectId;
-    return id !== null ? (s.branches[id] ?? []) : [];
-  });
+  const activeBranchesRaw = useProjectStore((s) =>
+    s.activeProjectId !== null ? s.branches[s.activeProjectId] : undefined
+  );
+  const branches = activeBranchesRaw ?? EMPTY_BRANCHES;
 
   const addSession = useTerminalStore((s) => s.addSession);
   const setActiveSession = useTerminalStore((s) => s.setActiveSession);

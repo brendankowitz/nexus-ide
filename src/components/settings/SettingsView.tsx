@@ -393,6 +393,7 @@ export const SettingsView = (): React.JSX.Element => {
   // Load persisted settings on mount
   useEffect(() => {
     const load = async (): Promise<void> => {
+      if (!window.nexusAPI?.settings) { setLoading(false); return; }
       try {
         const data = await window.nexusAPI.settings.get();
         const partial = fromStoreData(data);

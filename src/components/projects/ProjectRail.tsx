@@ -18,6 +18,7 @@ export const ProjectRail = (): React.JSX.Element => {
   // Load real projects from IPC on mount
   useEffect(() => {
     async function loadProjects(): Promise<void> {
+      if (!window.nexusAPI?.projects) return; // No preload bridge (running outside Electron)
       try {
         const loaded = await window.nexusAPI.projects.list();
         setProjects(loaded);

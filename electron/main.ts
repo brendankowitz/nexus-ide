@@ -33,7 +33,7 @@ const createWindow = (): void => {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false, // preload needs Node APIs (ipcRenderer, process.platform)
       preload: join(__dirname, '../preload/preload.js'),
     },
   });

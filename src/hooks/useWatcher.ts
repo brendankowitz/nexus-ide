@@ -32,6 +32,7 @@ export function useWatcher(): void {
     }
 
     if (activeProjectId === null || activeProjectPath === null) return;
+    if (!window.nexusAPI?.watcher) return; // No preload bridge
 
     function handleChange(event: GitChangeEvent): void {
       if (event.projectPath !== activeProjectPath) return;

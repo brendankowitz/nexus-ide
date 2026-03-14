@@ -27,6 +27,7 @@ export function useGit(): UseGitReturn {
   const mountedRef = useRef(true);
 
   const fetchAll = useCallback(async (): Promise<void> => {
+    if (!window.nexusAPI?.git) return; // No preload bridge
     const projectId = getProjectState().activeProjectId;
     if (projectId === null) return;
 
