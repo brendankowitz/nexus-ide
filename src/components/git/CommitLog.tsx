@@ -156,7 +156,7 @@ const CommitEntry = ({ commit }: { commit: Commit }): React.JSX.Element => {
             className="relative cursor-pointer text-phase-plan hover:underline"
             title="Click to copy hash"
           >
-            {commit.hash}
+            {commit.hash.slice(0, 7)}
             {copied && (
               <span className="absolute -top-5 left-0 rounded-[3px] border border-border-strong bg-bg-overlay px-1.5 py-px text-[9px] text-text-secondary shadow-md">
                 Copied!
