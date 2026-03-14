@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "electron-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@kanishka-namdeo/electron-mcp-server"
+      ],
+      "env": {
+        "LOG_LEVEL": "info",
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
