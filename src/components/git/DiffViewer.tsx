@@ -1,9 +1,47 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { DiffHunk } from '@/components/git/DiffHunk';
 import { FullDiffPanel } from '@/components/git/FullDiffPanel';
-import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
+import { DiffListView } from '@/components/git/DiffListView';
+import { DiffTreeView } from '@/components/git/DiffTreeView';
+import { DiffGroupsView } from '@/components/git/DiffGroupsView';
+import { DiffFileRow } from '@/components/git/DiffFileRow';
+import type { DiffFile, DiffHunk as DiffHunkType, DiffViewMode } from '@/types';
+
+// ── SVG Icons for View Mode Toggle ───────────────
+
+const ListIcon = (): React.JSX.Element => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+    <line x1="1" y1="2.5" x2="11" y2="2.5" />
+    <line x1="1" y1="6" x2="11" y2="6" />
+    <line x1="1" y1="9.5" x2="11" y2="9.5" />
+    <circle cx="2" cy="2.5" r="0.6" fill="currentColor" stroke="none" />
+    <circle cx="2" cy="6" r="0.6" fill="currentColor" stroke="none" />
+    <circle cx="2" cy="9.5" r="0.6" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const TreeIcon = (): React.JSX.Element => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+    <line x1="2" y1="1.5" x2="2" y2="10.5" />
+    <line x1="2" y1="3" x2="6" y2="3" />
+    <line x1="2" y1="6" x2="6" y2="6" />
+    <line x1="2" y1="9" x2="6" y2="9" />
+    <line x1="6" y1="6" x2="6" y2="7.5" />
+    <line x1="6" y1="7.5" x2="9" y2="7.5" />
+    <rect x="6" y="1.5" width="4" height="2" rx="0.5" />
+    <rect x="6" y="4.5" width="4" height="2" rx="0.5" />
+    <rect x="9" y="7.5" width="2" height="2" rx="0.5" />
+  </svg>
+);
+
+const GroupsIcon = (): React.JSX.Element => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="1" width="4.5" height="4.5" rx="1" />
+    <rect x="6.5" y="1" width="4.5" height="4.5" rx="1" />
+    <rect x="1" y="6.5" width="4.5" height="4.5" rx="1" />
+    <rect x="6.5" y="6.5" width="4.5" height="4.5" rx="1" />
+  </svg>
+);
 
 // ── Empty State ──────────────────────────────────
 
@@ -38,6 +76,40 @@ const DiffLoading = (): React.JSX.Element => (
   </div>
 );
 
+// ── View Mode Toggle ─────────────────────────────
+
+interface ViewModeToggleProps {
+  mode: DiffViewMode;
+  onChange: (mode: DiffViewMode) => void;
+}
+
+const VIEW_MODES: { key: DiffViewMode; label: string; Icon: () => React.JSX.Element }[] = [
+  { key: 'list', label: 'List details', Icon: ListIcon },
+  { key: 'tree', label: 'Tree structure', Icon: TreeIcon },
+  { key: 'groups', label: 'AI groups', Icon: GroupsIcon },
+];
+
+const ViewModeToggle = ({ mode, onChange }: ViewModeToggleProps): React.JSX.Element => (
+  <div className="flex overflow-hidden rounded-[var(--radius-sm)] border border-border-default">
+    {VIEW_MODES.map(({ key, label, Icon }) => (
+      <button
+        key={key}
+        title={label}
+        onClick={() => onChange(key)}
+        className={`flex h-[22px] w-[26px] cursor-pointer items-center justify-center transition-colors duration-[var(--duration-fast)] ${
+          mode === key
+            ? 'bg-bg-active text-text-primary'
+            : 'bg-transparent text-text-ghost hover:text-text-secondary'
+        } ${key !== 'list' ? 'border-l border-border-default' : ''}`}
+      >
+        <Icon />
+      </button>
+    ))}
+  </div>
+);
+
+// ── Main DiffViewer ──────────────────────────────
+
 export const DiffViewer = (): React.JSX.Element => {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
 
@@ -47,6 +119,7 @@ export const DiffViewer = (): React.JSX.Element => {
   const [isCommitting, setIsCommitting] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [commitError, setCommitError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<DiffViewMode>('list');
   const commitInputRef = useRef<HTMLInputElement>(null);
 
   const loadDiff = useCallback(async (): Promise<void> => {
@@ -67,19 +140,16 @@ export const DiffViewer = (): React.JSX.Element => {
     void loadDiff();
   }, [loadDiff]);
 
-  // Focus the commit input when the inline form appears
   useEffect(() => {
     if (isCommitting) {
       commitInputRef.current?.focus();
     }
   }, [isCommitting]);
 
-  // Loading state on initial load
   if (loading && diffFiles.length === 0) {
     return <DiffLoading />;
   }
 
-  // Clean working tree
   if (!loading && diffFiles.length === 0) {
     return <DiffCleanState />;
   }
@@ -138,6 +208,42 @@ export const DiffViewer = (): React.JSX.Element => {
     }
   };
 
+  const handleOpenFullDiff = (file: DiffFile, hunks: DiffHunkType[]): void => {
+    setFullDiffEntry({ file, hunks });
+  };
+
+  const renderFileList = (): React.JSX.Element => {
+    switch (viewMode) {
+      case 'list':
+        return (
+          <DiffListView
+            files={diffFiles}
+            activeProjectId={activeProjectId}
+            onRefresh={loadDiff}
+            onOpenFullDiff={handleOpenFullDiff}
+          />
+        );
+      case 'tree':
+        return (
+          <DiffTreeView
+            files={diffFiles}
+            activeProjectId={activeProjectId}
+            onRefresh={loadDiff}
+            onOpenFullDiff={handleOpenFullDiff}
+          />
+        );
+      case 'groups':
+        return (
+          <DiffGroupsView
+            files={diffFiles}
+            activeProjectId={activeProjectId}
+            onRefresh={loadDiff}
+            onOpenFullDiff={handleOpenFullDiff}
+          />
+        );
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Sticky header */}
@@ -148,6 +254,10 @@ export const DiffViewer = (): React.JSX.Element => {
             <span className="text-[var(--color-added)]">+{totalAdded}</span>{' '}
             <span className="text-[var(--color-deleted)]">-{totalDeleted}</span>
           </div>
+
+          {/* View mode toggle */}
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+
           <div className="ml-auto flex gap-1.5">
             <DiffButton label="stage all" onClick={handleStageAll} />
             {isCommitting ? (
@@ -180,17 +290,9 @@ export const DiffViewer = (): React.JSX.Element => {
         )}
       </div>
 
-      {/* File list */}
+      {/* File list -- view mode dependent */}
       <div className="flex-1 overflow-auto">
-        {diffFiles.map((file) => (
-          <DiffFileRow
-            key={file.filePath}
-            file={file}
-            activeProjectId={activeProjectId}
-            onRefresh={loadDiff}
-            onOpenFullDiff={(f, hunks) => setFullDiffEntry({ file: f, hunks })}
-          />
-        ))}
+        {renderFileList()}
       </div>
 
       {/* Full-panel diff overlay */}
@@ -205,224 +307,7 @@ export const DiffViewer = (): React.JSX.Element => {
   );
 };
 
-interface DiffFileRowProps {
-  file: DiffFile;
-  activeProjectId: string | null;
-  onRefresh: () => Promise<void>;
-  onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
-}
-
-const DiffFileRow = ({ file, activeProjectId, onRefresh, onOpenFullDiff }: DiffFileRowProps): React.JSX.Element => {
-  const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
-  const toggleDiffFile = useUIStore((s) => s.toggleDiffFile);
-  const isExpanded = !!expandedFiles[file.filePath];
-
-  const [hunks, setHunks] = useState<DiffHunkType[]>(file.hunks);
-  const [loadingHunks, setLoadingHunks] = useState(false);
-
-  // Load hunks on expand when not yet fetched
-  useEffect(() => {
-    if (!isExpanded) return;
-    if (hunks.length > 0) return;
-    if (!window.nexusAPI?.git || !activeProjectId) return;
-
-    setLoadingHunks(true);
-    window.nexusAPI.git.diffHunks(activeProjectId, file.filePath)
-      .then(setHunks)
-      .catch((err: unknown) => console.error('[DiffFileRow] failed to load hunks:', err))
-      .finally(() => setLoadingHunks(false));
-  }, [isExpanded, hunks.length, activeProjectId, file.filePath]);
-
-  // Split path into directory and filename
-  const lastSlash = file.filePath.lastIndexOf('/');
-  const dir = lastSlash >= 0 ? file.filePath.slice(0, lastSlash + 1) : '';
-  const filename = lastSlash >= 0 ? file.filePath.slice(lastSlash + 1) : file.filePath;
-
-  const statusStyles: Record<string, string> = {
-    M: 'bg-[var(--color-modified)] text-[var(--bg-void)]',
-    A: 'bg-[var(--color-added)] text-[var(--bg-void)]',
-    D: 'bg-[var(--color-deleted)] text-white',
-    R: 'bg-[var(--color-info)] text-[var(--bg-void)]',
-  };
-
-  const handleStage = useCallback(
-    async (e: React.MouseEvent): Promise<void> => {
-      e.stopPropagation();
-      if (activeProjectId === null) return;
-      if (!window.nexusAPI?.git) return;
-      try {
-        await window.nexusAPI.git.stage(activeProjectId, file.filePath);
-        await onRefresh();
-      } catch (err) {
-        console.error('[DiffFileRow] stage failed:', err);
-      }
-    },
-    [activeProjectId, file.filePath, onRefresh],
-  );
-
-  const handleUnstage = useCallback(
-    async (e: React.MouseEvent): Promise<void> => {
-      e.stopPropagation();
-      if (activeProjectId === null) return;
-      if (!window.nexusAPI?.git) return;
-      try {
-        await window.nexusAPI.git.unstage(activeProjectId, file.filePath);
-        await onRefresh();
-      } catch (err) {
-        console.error('[DiffFileRow] unstage failed:', err);
-      }
-    },
-    [activeProjectId, file.filePath, onRefresh],
-  );
-
-  const handleOpenFullDiff = useCallback(
-    async (e: React.MouseEvent): Promise<void> => {
-      e.stopPropagation();
-      if (!activeProjectId || !window.nexusAPI?.git) return;
-
-      // Reuse already-loaded hunks or fetch if needed
-      if (hunks.length > 0) {
-        onOpenFullDiff(file, hunks);
-        return;
-      }
-
-      try {
-        const loaded = await window.nexusAPI.git.diffHunks(activeProjectId, file.filePath);
-        setHunks(loaded);
-        onOpenFullDiff(file, loaded);
-      } catch (err) {
-        console.error('[DiffFileRow] failed to load hunks for full diff:', err);
-      }
-    },
-    [activeProjectId, file, hunks, onOpenFullDiff],
-  );
-
-  return (
-    <div className="border-b border-border-subtle">
-      {/* File row */}
-      <div
-        onClick={() => toggleDiffFile(file.filePath)}
-        className="flex cursor-pointer items-center gap-2.5 px-5 py-[7px] font-mono text-[12px] transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover"
-      >
-        {/* Expand icon */}
-        <span
-          className={`w-3 shrink-0 text-center text-[10px] text-text-ghost transition-transform duration-[var(--duration-fast)] ${
-            isExpanded ? 'rotate-90' : ''
-          }`}
-        >
-          &#9656;
-        </span>
-
-        {/* Status badge */}
-        <span
-          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] font-bold ${statusStyles[file.status] ?? ''}`}
-        >
-          {file.status}
-        </span>
-
-        {/* File path */}
-        <span className="flex-1 truncate text-text-primary">
-          {dir !== '' && <span className="text-text-tertiary">{dir}</span>}
-          {filename}
-          {file.status === 'R' && file.oldPath !== undefined && (
-            <span className="text-text-tertiary"> &larr; {file.oldPath.split('/').pop()}</span>
-          )}
-        </span>
-
-        {/* Stats */}
-        <div className="flex shrink-0 gap-1.5 text-[10px]">
-          {file.additions > 0 && (
-            <span className="text-[var(--color-added)]">+{file.additions}</span>
-          )}
-          {file.deletions > 0 && (
-            <span className="text-[var(--color-deleted)]">-{file.deletions}</span>
-          )}
-        </div>
-
-        {/* Full diff panel button */}
-        <button
-          title="Open full diff"
-          onClick={(e) => { void handleOpenFullDiff(e); }}
-          className="ml-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
-        >
-          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="0.5" y="0.5" width="8" height="8" rx="1" />
-            <polyline points="5.5,0.5 8.5,0.5 8.5,3.5" />
-            <line x1="4.5" y1="4.5" x2="8.5" y2="0.5" />
-          </svg>
-        </button>
-
-        {/* Stage / Unstage toggle */}
-        <StageToggle
-          filePath={file.filePath}
-          onStage={handleStage}
-          onUnstage={handleUnstage}
-        />
-      </div>
-
-      {/* Hunks */}
-      {isExpanded && (
-        <div className="border-t border-border-subtle bg-bg-void">
-          {loadingHunks && (
-            <div className="flex items-center gap-2 px-5 py-3">
-              <div className="h-2.5 w-2.5 animate-spin rounded-full border border-text-ghost border-t-phase-plan" />
-              <span className="font-mono text-[10px] text-text-tertiary">Loading diff...</span>
-            </div>
-          )}
-          {!loadingHunks && hunks.length === 0 && (
-            <div className="px-5 py-3 font-mono text-[10px] text-text-ghost">No changes to display</div>
-          )}
-          {hunks.map((hunk) => (
-            <DiffHunk key={hunk.header} hunk={hunk} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface StageToggleProps {
-  filePath: string;
-  onStage: (e: React.MouseEvent) => Promise<void>;
-  onUnstage: (e: React.MouseEvent) => Promise<void>;
-}
-
-const StageToggle = ({ filePath, onStage, onUnstage }: StageToggleProps): React.JSX.Element => {
-  // Track optimistic staged state locally; the parent refresh will confirm it
-  const [staged, setStaged] = useState(false);
-
-  const handleClick = useCallback(
-    async (e: React.MouseEvent): Promise<void> => {
-      const wasStaged = staged;
-      setStaged(!wasStaged);
-      try {
-        if (wasStaged) {
-          await onUnstage(e);
-        } else {
-          await onStage(e);
-        }
-      } catch {
-        // Revert optimistic update on failure
-        setStaged(wasStaged);
-      }
-    },
-    [staged, onStage, onUnstage],
-  );
-
-  return (
-    <button
-      title={staged ? `Unstage ${filePath}` : `Stage ${filePath}`}
-      onClick={(e) => { void handleClick(e); }}
-      className={`ml-1 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
-        staged
-          ? 'border-phase-execute bg-phase-execute text-bg-void hover:brightness-90'
-          : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
-      }`}
-    >
-      {staged ? '\u2713' : '+'}
-    </button>
-  );
-};
+// ── DiffButton (shared) ──────────────────────────
 
 interface DiffButtonProps {
   label: string;

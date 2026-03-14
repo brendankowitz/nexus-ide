@@ -70,6 +70,31 @@ export interface DiffLine {
   newLineNumber: number | null;
 }
 
+// ── Diff View Modes ─────────────────────────────
+
+export type DiffViewMode = 'list' | 'tree' | 'groups';
+
+export interface DiffTreeNode {
+  name: string;
+  path: string;
+  type: 'directory' | 'file';
+  file?: DiffFile;
+  children: DiffTreeNode[];
+  totalAdditions: number;
+  totalDeletions: number;
+}
+
+export interface DiffFeatureGroup {
+  heading: string;
+  subtitle: string;
+  files: DiffFile[];
+  totalAdditions: number;
+  totalDeletions: number;
+}
+
+export type SortColumn = 'name' | 'path' | 'state' | 'changes';
+export type SortDirection = 'asc' | 'desc';
+
 export interface Commit {
   hash: string;
   message: string;
