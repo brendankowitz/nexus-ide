@@ -1,11 +1,6 @@
 import { useUIStore, type MainTab } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { StatusDot } from '@/components/shared/StatusDot';
-import {
-  mockGitStatuses,
-  mockWorktreeCounts,
-  mockActivePhases,
-} from '@/lib/mock-data';
 
 const GearIcon = (): React.JSX.Element => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -43,15 +38,12 @@ const tabs: TabDef[] = [
 export const TabBar = (): React.JSX.Element => {
   const activeTab = useUIStore((s) => s.activeTab);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const storeGitStatus = useProjectStore((s) =>
+  const gitStatus = useProjectStore((s) =>
     s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null
   );
-
-  const gitStatus =
-    storeGitStatus ?? (activeProjectId !== null ? (mockGitStatuses[activeProjectId] ?? null) : null);
-  const worktreeCount = activeProjectId !== null ? (mockWorktreeCounts[activeProjectId] ?? 0) : 0;
-  const activePhase = activeProjectId !== null ? mockActivePhases[activeProjectId] : undefined;
+  const worktreeCount = useProjectStore((s) =>
+    s.activeProjectId !== null ? (s.worktrees[s.activeProjectId]?.length ?? 0) : 0
+  );
 
   const isSettingsActive = activeTab === 'settings';
 
@@ -71,9 +63,6 @@ export const TabBar = (): React.JSX.Element => {
                   : 'font-normal text-text-tertiary hover:text-text-secondary'
               }`}
             >
-              {tab.id === 'pipeline' && activePhase !== undefined && (
-                <StatusDot phase={activePhase} size={5} />
-              )}
               {tab.label}
               {tab.id === 'worktrees' && worktreeCount > 0 && (
                 <TabCount count={worktreeCount} isActive={isActive} />
@@ -89,7 +78,7 @@ export const TabBar = (): React.JSX.Element => {
         })}
       </div>
 
-      {/* Settings utility button — right-aligned, not a regular tab */}
+      {/* Settings utility button -- right-aligned, not a regular tab */}
       <button
         onClick={() => setActiveTab('settings')}
         title="Settings (Ctrl+,)"

@@ -80,6 +80,8 @@ export interface Commit {
   additions: number;
   deletions: number;
   isAIGenerated: boolean;
+  parents: string[];
+  refs: string[];
 }
 
 // ── Pipeline ─────────────────────────────────────

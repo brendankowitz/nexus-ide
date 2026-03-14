@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { mockBranches } from '@/lib/mock-data';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useGit } from '@/hooks/useGit';
+import { useToastStore } from '@/stores/toastStore';
 import type { Branch } from '@/types';
 
 // ── Types ─────────────────────────────────────────
@@ -63,13 +63,78 @@ function initCollapsedState(groups: BranchGroup[], headPrefix: string | null): R
   return state;
 }
 
+// ── Empty State ──────────────────────────────────
+
+const BranchEmptyState = (): React.JSX.Element => (
+  <div className="flex h-full flex-col items-center justify-center gap-4 px-8">
+    <div className="relative">
+      <div
+        className="absolute inset-0 rounded-2xl opacity-30 blur-2xl"
+        style={{ background: 'var(--phase-plan)' }}
+      />
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border-default bg-bg-surface">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-tertiary">
+          <line x1="6" y1="3" x2="6" y2="15" />
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M18 9a9 9 0 0 1-9 9" />
+        </svg>
+      </div>
+    </div>
+    <div className="text-center">
+      <p className="font-mono text-[13px] font-medium text-text-primary">No branches found</p>
+      <p className="mt-1 text-[11px] text-text-tertiary">Branches will appear once git data is loaded</p>
+    </div>
+  </div>
+);
+
+// ── Loading State ────────────────────────────────
+
+const BranchLoading = (): React.JSX.Element => (
+  <div className="flex h-full items-center justify-center">
+    <div className="flex items-center gap-2.5">
+      <div className="h-3 w-3 animate-spin rounded-full border border-text-ghost border-t-phase-plan" />
+      <span className="font-mono text-[11px] text-text-tertiary">Loading branches...</span>
+    </div>
+  </div>
+);
+
 // ── Components ────────────────────────────────────
 
 export const BranchList = (): React.JSX.Element => {
-  const { topLevel, groups } = groupBranches(mockBranches);
-  const headPrefix = findHeadPrefix(mockBranches);
-  const { refresh } = useGit();
+  const branches = useProjectStore((s) =>
+    s.activeProjectId !== null ? (s.branches[s.activeProjectId] ?? undefined) : undefined,
+  );
+  const { loading, refresh } = useGit();
 
+  // Loading: no data yet and actively loading
+  if (branches === undefined && loading) {
+    return <BranchLoading />;
+  }
+
+  // Empty: data loaded but no branches
+  if (branches === undefined || branches.length === 0) {
+    return <BranchEmptyState />;
+  }
+
+  const { topLevel, groups } = groupBranches(branches);
+  const headPrefix = findHeadPrefix(branches);
+
+  return <BranchListInner topLevel={topLevel} groups={groups} headPrefix={headPrefix} refresh={refresh} />;
+};
+
+// Extracted inner to avoid re-computing collapsed state on every render
+const BranchListInner = ({
+  topLevel,
+  groups,
+  headPrefix,
+  refresh,
+}: {
+  topLevel: Branch[];
+  groups: BranchGroup[];
+  headPrefix: string | null;
+  refresh: () => Promise<void>;
+}): React.JSX.Element => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
     initCollapsedState(groups, headPrefix),
   );
@@ -120,7 +185,7 @@ const GroupHeader = ({ prefix, count, isCollapsed, onToggle }: GroupHeaderProps)
   >
     {/* Chevron in place of indicator dot */}
     <span className="flex h-[7px] w-[7px] shrink-0 items-center justify-center text-[9px] leading-none text-text-tertiary">
-      {isCollapsed ? '›' : '‹'}
+      {isCollapsed ? '\u203A' : '\u2039'}
     </span>
 
     {/* Group name */}
@@ -159,22 +224,28 @@ const BranchRow = ({ branch, indented = false, refresh }: BranchRowProps): React
 
   const handleCheckout = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
+    if (!window.nexusAPI?.git) return;
     try {
       await window.nexusAPI.git.checkout(activeProjectId, branch.name);
       await refresh();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Checkout failed');
+      const msg = err instanceof Error ? err.message : 'Checkout failed';
+      showError(msg);
+      useToastStore.getState().addToast(`Checkout: ${msg}`, 'error');
     }
   }, [activeProjectId, branch.name, refresh, showError]);
 
   const handleWorktree = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
+    if (!window.nexusAPI?.git) return;
     try {
       await window.nexusAPI.git.createWorktree(activeProjectId, branch.name);
       await refresh();
       showSuccess('Worktree created');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to create worktree');
+      const msg = err instanceof Error ? err.message : 'Failed to create worktree';
+      showError(msg);
+      useToastStore.getState().addToast(`Worktree: ${msg}`, 'error');
     }
   }, [activeProjectId, branch.name, refresh, showError, showSuccess]);
 

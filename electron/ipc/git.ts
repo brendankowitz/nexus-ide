@@ -586,7 +586,36 @@ function initials(name: string): string {
 }
 
 /**
+ * Parse the %D (decoration) field from git log into clean ref names.
+ * Examples:
+ *   "HEAD -> main, origin/main, tag: v1.0" -> ["HEAD", "main", "origin/main", "v1.0"]
+ *   "" -> []
+ */
+function parseRefs(decoration: string): string[] {
+  if (!decoration.trim()) return [];
+  const refs: string[] = [];
+  for (const raw of decoration.split(',')) {
+    let ref = raw.trim();
+    if (!ref) continue;
+    // "HEAD -> main" produces two refs: HEAD and main
+    if (ref.includes(' -> ')) {
+      const [left, right] = ref.split(' -> ');
+      if (left?.trim()) refs.push(left.trim());
+      if (right?.trim()) refs.push(right.trim());
+      continue;
+    }
+    // "tag: v1.0" -> "v1.0"
+    if (ref.startsWith('tag: ')) {
+      ref = ref.slice(5);
+    }
+    refs.push(ref);
+  }
+  return refs;
+}
+
+/**
  * Parse git log with numstat into Commit[].
+ * Format includes parent hashes (%P) and decorations (%D) for graph rendering.
  */
 export async function getLog(
   projectPath: string,
@@ -597,7 +626,7 @@ export async function getLog(
     const SEP = '---nexus-commit-sep---';
     const result = await execGit(projectPath, [
       'log',
-      `--format=${SEP}%n%H|%s|%an|%ae|%aI`,
+      `--format=${SEP}%n%H|%P|%s|%an|%ae|%aI|%D`,
       '--numstat',
       `-n${count}`,
     ]);
@@ -611,29 +640,48 @@ export async function getLog(
       const blockLines = splitLines(block).filter((l) => l.trim());
       if (blockLines.length === 0) continue;
 
-      // First line is the formatted commit info
+      // First line is the formatted commit info:
+      // %H|%P|%s|%an|%ae|%aI|%D
       const infoLine = blockLines[0];
+
+      // Parse fields by pipe delimiter. We need exactly 7 fields but the
+      // message (%s) and decoration (%D) can contain pipes, so we parse
+      // positionally: hash is first, parents is second, then we parse from
+      // the right for the unambiguous fields.
       const pipeIdx1 = infoLine.indexOf('|');
       if (pipeIdx1 === -1) continue;
-
       const hash = infoLine.slice(0, pipeIdx1);
-      const rest = infoLine.slice(pipeIdx1 + 1);
+      const afterHash = infoLine.slice(pipeIdx1 + 1);
 
-      const pipeIdx2 = rest.indexOf('|');
+      // Parents field: space-separated hashes (or empty for root commit)
+      const pipeIdx2 = afterHash.indexOf('|');
       if (pipeIdx2 === -1) continue;
-      const message = rest.slice(0, pipeIdx2);
-      const rest2 = rest.slice(pipeIdx2 + 1);
+      const parentsRaw = afterHash.slice(0, pipeIdx2);
+      const parents = parentsRaw.trim() ? parentsRaw.trim().split(/\s+/) : [];
+      const afterParents = afterHash.slice(pipeIdx2 + 1);
 
-      const pipeIdx3 = rest2.indexOf('|');
-      if (pipeIdx3 === -1) continue;
-      const author = rest2.slice(0, pipeIdx3);
-      const rest3 = rest2.slice(pipeIdx3 + 1);
+      // Remaining: %s|%an|%ae|%aI|%D
+      // Parse from the right to handle pipes in the message.
+      // %D is after the last pipe, %aI before that, %ae before that, %an before that.
+      // Find the last 4 pipes from the right.
+      const rightPipes: number[] = [];
+      for (let i = afterParents.length - 1; i >= 0 && rightPipes.length < 4; i--) {
+        if (afterParents[i] === '|') {
+          rightPipes.push(i);
+        }
+      }
 
-      const pipeIdx4 = rest3.indexOf('|');
-      if (pipeIdx4 === -1) continue;
-      // _email not used but parsed for correct field alignment
-      const _email = rest3.slice(0, pipeIdx4);
-      const timestamp = rest3.slice(pipeIdx4 + 1);
+      if (rightPipes.length < 4) continue;
+
+      // rightPipes[0] = before %D, rightPipes[1] = before %aI, etc.
+      const message = afterParents.slice(0, rightPipes[3]);
+      const author = afterParents.slice(rightPipes[3] + 1, rightPipes[2]);
+      // _email parsed for correct field alignment
+      const _email = afterParents.slice(rightPipes[2] + 1, rightPipes[1]);
+      const timestamp = afterParents.slice(rightPipes[1] + 1, rightPipes[0]);
+      const decorationRaw = afterParents.slice(rightPipes[0] + 1);
+
+      const refs = parseRefs(decorationRaw);
 
       // Parse numstat lines for additions/deletions
       let additions = 0;
@@ -663,6 +711,8 @@ export async function getLog(
         additions,
         deletions,
         isAIGenerated,
+        parents,
+        refs,
       });
     }
 

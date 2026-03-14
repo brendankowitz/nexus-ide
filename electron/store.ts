@@ -65,6 +65,9 @@ export interface AgentsConfig {
   readonly claudeCode: AgentEntry;
   readonly copilotCli: AgentEntry;
   readonly aider: AgentEntry;
+  readonly az?: AgentEntry;
+  readonly gh?: AgentEntry;
+  readonly dotnet?: AgentEntry;
 }
 
 export interface StoredProject {
@@ -113,8 +116,11 @@ const STORE_DEFAULTS: NexusStoreSchema = {
   },
   agents: {
     claudeCode: { command: 'claude', available: true },
-    copilotCli: { command: 'gh', args: ['copilot'], available: true },
+    copilotCli: { command: 'copilot', available: true },
     aider: { command: 'aider', available: false },
+    az: { command: 'az', available: true },
+    gh: { command: 'gh', available: true },
+    dotnet: { command: 'dotnet', available: true },
   },
   projects: [],
   resolvedShell: null,

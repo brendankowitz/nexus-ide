@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface LaunchOption {
   label: string;
@@ -26,9 +26,9 @@ const QUICK_LAUNCH_OPTIONS: readonly LaunchOption[] = [
   },
   {
     label: 'Copilot CLI',
-    command: 'gh',
-    args: ['copilot'],
-    description: 'gh copilot',
+    command: 'copilot',
+    args: [],
+    description: 'copilot',
   },
 ];
 
@@ -46,6 +46,18 @@ export const LaunchMenu = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [customCommand, setCustomCommand] = useState('');
+  const [position, setPosition] = useState<{ bottom: number; left: number } | null>(null);
+
+  // Calculate fixed position above anchor button
+  useLayoutEffect(() => {
+    if (anchorRef.current === null) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    // Position menu above the button: bottom of viewport minus top of button, plus 8px gap
+    setPosition({
+      bottom: window.innerHeight - rect.top + 8,
+      left: rect.left,
+    });
+  }, [anchorRef]);
 
   // Close on click outside
   useEffect(() => {
@@ -82,10 +94,21 @@ export const LaunchMenu = ({
   };
 
   return (
-    <div
-      ref={menuRef}
-      className="absolute bottom-full left-0 z-50 mb-2 flex w-[280px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border-strong bg-bg-raised shadow-[0_16px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] animate-[palette-enter_150ms_var(--ease-out)]"
-    >
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-[99]"
+        onMouseDown={() => onClose()}
+      />
+      <div
+        ref={menuRef}
+        style={
+          position !== null
+            ? { position: 'fixed', bottom: position.bottom, left: position.left }
+            : { position: 'fixed', bottom: 80, left: 0 }
+        }
+        className="z-[100] flex w-[280px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border-strong bg-bg-raised shadow-[0_16px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] animate-[palette-enter_150ms_var(--ease-out)]"
+      >
       {/* Quick launch */}
       <div className="px-2.5 pb-1 pt-2.5 font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-ghost">
         Quick launch
@@ -138,5 +161,6 @@ export const LaunchMenu = ({
         </div>
       </div>
     </div>
+    </>
   );
 };

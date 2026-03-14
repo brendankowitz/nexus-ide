@@ -45,10 +45,18 @@ function fromStoreData(data: Record<string, unknown>): Partial<SettingsState> {
   if (agents) {
     const claudeCode = agents['claudeCode'] as Record<string, unknown> | undefined;
     if (claudeCode && typeof claudeCode['command'] === 'string') result.claudeCodePath = claudeCode['command'];
+    if (claudeCode && typeof claudeCode['mode'] === 'string') result.claudeCodeMode = claudeCode['mode'];
     const copilotCli = agents['copilotCli'] as Record<string, unknown> | undefined;
     if (copilotCli && typeof copilotCli['command'] === 'string') result.githubCopilotPath = copilotCli['command'];
+    if (copilotCli && typeof copilotCli['mode'] === 'string') result.copilotMode = copilotCli['mode'];
     const aider = agents['aider'] as Record<string, unknown> | undefined;
     if (aider && typeof aider['command'] === 'string') result.aiderPath = aider['command'];
+    const az = agents['az'] as Record<string, unknown> | undefined;
+    if (az && typeof az['command'] === 'string') result.azureCLIPath = az['command'];
+    const gh = agents['gh'] as Record<string, unknown> | undefined;
+    if (gh && typeof gh['command'] === 'string') result.githubCLIPath = gh['command'];
+    const dotnet = agents['dotnet'] as Record<string, unknown> | undefined;
+    if (dotnet && typeof dotnet['command'] === 'string') result.dotnetPath = dotnet['command'];
   }
 
   return result;
@@ -80,8 +88,13 @@ interface SettingsState {
   longPaths: boolean;
   // Tool Paths
   claudeCodePath: string;
+  claudeCodeMode: string;
   githubCopilotPath: string;
+  copilotMode: string;
   aiderPath: string;
+  azureCLIPath: string;
+  githubCLIPath: string;
+  dotnetPath: string;
   customTools: CustomTool[];
   // Pipeline Defaults
   defaultPlanPlugin: string;
@@ -112,8 +125,13 @@ const defaultSettings: SettingsState = {
   autoFetchInterval: 60000,
   longPaths: false,
   claudeCodePath: 'claude',
-  githubCopilotPath: 'gh',
+  claudeCodeMode: '',
+  githubCopilotPath: 'copilot',
+  copilotMode: '',
   aiderPath: 'aider',
+  azureCLIPath: 'az',
+  githubCLIPath: 'gh',
+  dotnetPath: 'dotnet',
   customTools: [],
   defaultPlanPlugin: 'fn-investigation',
   defaultExecutePlugin: 'fn-task',
@@ -435,9 +453,12 @@ export const SettingsView = (): React.JSX.Element => {
           defaultValidateChain: settings.defaultValidationChain,
         },
         agents: {
-          claudeCode: { command: settings.claudeCodePath, available: true },
-          copilotCli: { command: settings.githubCopilotPath, args: ['copilot'], available: true },
+          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), available: true },
+          copilotCli: { command: settings.githubCopilotPath, ...(settings.copilotMode ? { mode: settings.copilotMode } : {}), available: true },
           aider: { command: settings.aiderPath, available: false },
+          az: { command: settings.azureCLIPath, available: true },
+          gh: { command: settings.githubCLIPath, available: true },
+          dotnet: { command: settings.dotnetPath, available: true },
         },
       });
       setSaved(true);
@@ -458,17 +479,23 @@ export const SettingsView = (): React.JSX.Element => {
   }, [set, settings.statusPollInterval, settings.autoFetchInterval]);
 
   const handleDetectTool = useCallback(
-    (key: 'claudeCodePath' | 'githubCopilotPath' | 'aiderPath'): void => {
+    (key: 'claudeCodePath' | 'githubCopilotPath' | 'aiderPath' | 'azureCLIPath' | 'githubCLIPath' | 'dotnetPath'): void => {
       // Mark the currently configured command as detected by persisting it
       const command = settings[key];
       void window.nexusAPI.settings.set({
         agents: {
-          claudeCode: { command: settings.claudeCodePath, available: true },
-          copilotCli: { command: settings.githubCopilotPath, args: ['copilot'], available: true },
+          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), available: true },
+          copilotCli: { command: settings.githubCopilotPath, ...(settings.copilotMode ? { mode: settings.copilotMode } : {}), available: true },
           aider: { command: settings.aiderPath, available: false },
+          az: { command: settings.azureCLIPath, available: true },
+          gh: { command: settings.githubCLIPath, available: true },
+          dotnet: { command: settings.dotnetPath, available: true },
           ...(key === 'claudeCodePath' ? { claudeCode: { command, available: true } } : {}),
-          ...(key === 'githubCopilotPath' ? { copilotCli: { command, args: ['copilot'], available: true } } : {}),
+          ...(key === 'githubCopilotPath' ? { copilotCli: { command, available: true } } : {}),
           ...(key === 'aiderPath' ? { aider: { command, available: true } } : {}),
+          ...(key === 'azureCLIPath' ? { az: { command, available: true } } : {}),
+          ...(key === 'githubCLIPath' ? { gh: { command, available: true } } : {}),
+          ...(key === 'dotnetPath' ? { dotnet: { command, available: true } } : {}),
         },
       });
     },
@@ -633,25 +660,51 @@ export const SettingsView = (): React.JSX.Element => {
           {/* Tool Paths */}
           <Section title="tool paths">
             <Field label="Claude Code">
-              <TextInput
-                value={settings.claudeCodePath}
-                onChange={(v) => set('claudeCodePath', v)}
-                placeholder="claude"
-                suffix={
-                  <DetectButton onClick={() => handleDetectTool('claudeCodePath')} />
-                }
-              />
+              <div className="flex flex-col gap-1.5">
+                <TextInput
+                  value={settings.claudeCodePath}
+                  onChange={(v) => set('claudeCodePath', v)}
+                  placeholder="claude"
+                  suffix={
+                    <DetectButton onClick={() => handleDetectTool('claudeCodePath')} />
+                  }
+                />
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-text-tertiary w-10 shrink-0">mode</span>
+                  <select
+                    value={settings.claudeCodeMode}
+                    onChange={(e) => set('claudeCodeMode', e.target.value)}
+                    className={selectClass + ' flex-1'}
+                  >
+                    <option value="">normal</option>
+                    <option value="--dangerously-skip-permissions">--dangerously-skip-permissions (yolo)</option>
+                  </select>
+                </div>
+              </div>
             </Field>
 
-            <Field label="GitHub Copilot">
-              <TextInput
-                value={settings.githubCopilotPath}
-                onChange={(v) => set('githubCopilotPath', v)}
-                placeholder="gh"
-                suffix={
-                  <DetectButton onClick={() => handleDetectTool('githubCopilotPath')} />
-                }
-              />
+            <Field label="GitHub Copilot CLI">
+              <div className="flex flex-col gap-1.5">
+                <TextInput
+                  value={settings.githubCopilotPath}
+                  onChange={(v) => set('githubCopilotPath', v)}
+                  placeholder="copilot"
+                  suffix={
+                    <DetectButton onClick={() => handleDetectTool('githubCopilotPath')} />
+                  }
+                />
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-text-tertiary w-10 shrink-0">mode</span>
+                  <select
+                    value={settings.copilotMode}
+                    onChange={(e) => set('copilotMode', e.target.value)}
+                    className={selectClass + ' flex-1'}
+                  >
+                    <option value="">normal</option>
+                    <option value="--yolo">--yolo (skip confirmations)</option>
+                  </select>
+                </div>
+              </div>
             </Field>
 
             <Field label="Aider">
@@ -661,6 +714,39 @@ export const SettingsView = (): React.JSX.Element => {
                 placeholder="aider"
                 suffix={
                   <DetectButton onClick={() => handleDetectTool('aiderPath')} />
+                }
+              />
+            </Field>
+
+            <Field label="Azure CLI">
+              <TextInput
+                value={settings.azureCLIPath}
+                onChange={(v) => set('azureCLIPath', v)}
+                placeholder="az"
+                suffix={
+                  <DetectButton onClick={() => handleDetectTool('azureCLIPath')} />
+                }
+              />
+            </Field>
+
+            <Field label="GitHub CLI">
+              <TextInput
+                value={settings.githubCLIPath}
+                onChange={(v) => set('githubCLIPath', v)}
+                placeholder="gh"
+                suffix={
+                  <DetectButton onClick={() => handleDetectTool('githubCLIPath')} />
+                }
+              />
+            </Field>
+
+            <Field label="dotnet">
+              <TextInput
+                value={settings.dotnetPath}
+                onChange={(v) => set('dotnetPath', v)}
+                placeholder="dotnet"
+                suffix={
+                  <DetectButton onClick={() => handleDetectTool('dotnetPath')} />
                 }
               />
             </Field>

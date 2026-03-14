@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import { mockGitStatuses } from '@/lib/mock-data';
 
 export const TitleBar = (): React.JSX.Element => {
   const [clock, setClock] = useState(formatClock());
   const activeProject = useProjectStore((s) => s.activeProject);
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const storeGitStatus = useProjectStore((s) =>
+  const gitStatus = useProjectStore((s) =>
     s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null
   );
 
@@ -14,9 +12,6 @@ export const TitleBar = (): React.JSX.Element => {
     const interval = setInterval(() => setClock(formatClock()), 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const gitStatus =
-    storeGitStatus ?? (activeProjectId !== null ? (mockGitStatuses[activeProjectId] ?? null) : null);
 
   return (
     <div

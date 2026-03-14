@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useToastStore } from '@/stores/toastStore';
 import type { DiscoveredRepo } from '@/types';
 
 interface AddProjectModalProps {
@@ -73,6 +74,7 @@ export const AddProjectModal = ({ onClose }: AddProjectModalProps): React.JSX.El
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Failed to add project: ${msg}`);
+      useToastStore.getState().addToast(`Failed to add project: ${msg}`, 'error');
       console.error('[AddProjectModal] add failed:', err);
     } finally {
       setSubmitting(false);
@@ -92,6 +94,7 @@ export const AddProjectModal = ({ onClose }: AddProjectModalProps): React.JSX.El
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Failed to add project: ${msg}`);
+      useToastStore.getState().addToast(`Failed to add project: ${msg}`, 'error');
       console.error('[AddProjectModal] add failed:', err);
     } finally {
       setSubmitting(false);

@@ -2,10 +2,48 @@ import { useState, useEffect, useCallback } from 'react';
 import { RunSidebar } from '@/components/pipeline/RunSidebar';
 import { PhaseHeader } from '@/components/pipeline/PhaseHeader';
 import { ValidationChain } from '@/components/pipeline/ValidationChain';
-import { mockPipelineRuns, mockExecuteOutput } from '@/lib/mock-data';
 import { useProjectStore } from '@/stores/projectStore';
 import { usePipelineStore } from '@/stores/pipelineStore';
 import type { Phase, PipelineConfig, PipelineRun } from '@/types';
+
+/* ─── Empty State ──────────────────────────────────────────────────────────── */
+
+const PipelineEmptyState = ({ onCreateRun }: { onCreateRun: () => void }): React.JSX.Element => (
+  <div className="flex h-full flex-col items-center justify-center gap-4 px-8">
+    <div className="relative">
+      <div
+        className="absolute inset-0 rounded-2xl opacity-30 blur-2xl"
+        style={{ background: 'var(--phase-validate)' }}
+      />
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border-default bg-bg-surface">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-tertiary">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      </div>
+    </div>
+    <div className="text-center">
+      <p className="font-mono text-[13px] font-medium text-text-primary">No pipeline runs</p>
+      <p className="mt-1 text-[11px] text-text-tertiary">Create a run to start plan-execute-validate</p>
+    </div>
+    <button
+      onClick={onCreateRun}
+      className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--phase-validate-dim)] bg-[var(--phase-validate-dim)] px-4 py-2 font-mono text-[11px] font-medium text-phase-validate transition-all duration-[var(--duration-normal)] hover:bg-phase-validate hover:text-[var(--bg-void)]"
+    >
+      Create Run
+    </button>
+  </div>
+);
+
+/* ─── Loading State ─────────────────────────────────────────────────────────── */
+
+const PipelineLoading = (): React.JSX.Element => (
+  <div className="flex h-full items-center justify-center">
+    <div className="flex items-center gap-2.5">
+      <div className="h-3 w-3 animate-spin rounded-full border border-text-ghost border-t-phase-validate" />
+      <span className="font-mono text-[11px] text-text-tertiary">Loading pipeline runs...</span>
+    </div>
+  </div>
+);
 
 /* ─── New-run form ─────────────────────────────────────────────────────────── */
 
@@ -57,7 +95,7 @@ const NewRunForm = ({ onSubmit, onCancel }: NewRunFormProps): React.JSX.Element 
           disabled={submitting || !name.trim() || !branch.trim()}
           className="flex-1 rounded-[var(--radius-sm)] border border-border-strong bg-bg-active py-1.5 font-mono text-[11px] text-text-secondary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? 'Creating…' : 'Create'}
+          {submitting ? 'Creating...' : 'Create'}
         </button>
         <button
           type="button"
@@ -80,6 +118,7 @@ export const PipelineView = (): React.JSX.Element => {
   const [activePhase, setActivePhase] = useState<Phase>('execute');
   const [showNewRunForm, setShowNewRunForm] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   /* ── Load runs from IPC on mount / project change ──────────────────────── */
 
@@ -89,6 +128,7 @@ export const PipelineView = (): React.JSX.Element => {
     const api = (window as unknown as { nexusAPI?: { pipeline?: { list?(id: string): Promise<PipelineRun[]> } } }).nexusAPI;
     if (!api?.pipeline?.list) return;
 
+    setLoading(true);
     try {
       const fetched = await api.pipeline.list(activeProjectId);
       for (const run of fetched) {
@@ -101,6 +141,8 @@ export const PipelineView = (): React.JSX.Element => {
       if (!msg.includes('NOT_IMPLEMENTED')) {
         setLoadError(msg);
       }
+    } finally {
+      setLoading(false);
     }
   }, [activeProjectId, addRun]);
 
@@ -108,16 +150,13 @@ export const PipelineView = (): React.JSX.Element => {
     void loadRuns();
   }, [loadRuns]);
 
-  /* ── Determine displayed runs (real or fallback mock) ──────────────────── */
-
-  const displayRuns: PipelineRun[] =
-    runs.length > 0 ? runs : mockPipelineRuns;
+  /* ── Determine displayed runs (real data only) ─────────────────────────── */
 
   const resolvedActiveRunId: string | null =
-    activeRunId ?? displayRuns[0]?.id ?? null;
+    activeRunId ?? runs[0]?.id ?? null;
 
   const activeRun: PipelineRun | null =
-    displayRuns.find((r) => r.id === resolvedActiveRunId) ?? displayRuns[0] ?? null;
+    runs.find((r) => r.id === resolvedActiveRunId) ?? runs[0] ?? null;
 
   /* ── New-run handler ───────────────────────────────────────────────────── */
 
@@ -150,14 +189,16 @@ export const PipelineView = (): React.JSX.Element => {
     setShowNewRunForm(false);
   };
 
+  /* ── Loading state ────────────────────────────────────────────────────── */
+
+  if (loading && runs.length === 0) {
+    return <PipelineLoading />;
+  }
+
   /* ── Empty state ───────────────────────────────────────────────────────── */
 
   if (resolvedActiveRunId === null || activeRun === null) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <span className="font-mono text-[11px] text-text-ghost">No pipeline runs yet.</span>
-      </div>
-    );
+    return <PipelineEmptyState onCreateRun={() => { setShowNewRunForm(true); }} />;
   }
 
   /* ── Main layout ───────────────────────────────────────────────────────── */
@@ -198,7 +239,7 @@ export const PipelineView = (): React.JSX.Element => {
         <RunSidebar
           activeRunId={resolvedActiveRunId}
           onSelectRun={setActiveRun}
-          runs={displayRuns}
+          runs={runs}
         />
       </div>
 
@@ -228,7 +269,7 @@ export const PipelineView = (): React.JSX.Element => {
                 Execute Output (live)
               </div>
               <div className="max-h-[400px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-md)] border border-border-subtle bg-bg-void p-4 font-mono text-[11px] leading-[1.7] text-text-secondary">
-                {activeRun.phases.execute.output ?? mockExecuteOutput}
+                {activeRun.phases.execute.output ?? 'No output available.'}
               </div>
             </div>
           )}
