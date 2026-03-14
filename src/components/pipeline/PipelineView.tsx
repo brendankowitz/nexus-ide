@@ -124,13 +124,11 @@ export const PipelineView = (): React.JSX.Element => {
 
   const loadRuns = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
-
-    const api = (window as unknown as { nexusAPI?: { pipeline?: { list?(id: string): Promise<PipelineRun[]> } } }).nexusAPI;
-    if (!api?.pipeline?.list) return;
+    if (!window.nexusAPI?.pipeline) return;
 
     setLoading(true);
     try {
-      const fetched = await api.pipeline.list(activeProjectId);
+      const fetched = await window.nexusAPI.pipeline.list(activeProjectId);
       for (const run of fetched) {
         addRun(run);
       }
@@ -162,9 +160,7 @@ export const PipelineView = (): React.JSX.Element => {
 
   const handleNewRun = async (name: string, branch: string): Promise<void> => {
     if (activeProjectId === null) return;
-
-    const api = (window as unknown as { nexusAPI?: { pipeline?: { create?(id: string, cfg: PipelineConfig): Promise<PipelineRun> } } }).nexusAPI;
-    if (!api?.pipeline?.create) {
+    if (!window.nexusAPI?.pipeline) {
       setShowNewRunForm(false);
       return;
     }
@@ -183,7 +179,7 @@ export const PipelineView = (): React.JSX.Element => {
       },
     };
 
-    const run = await api.pipeline.create(activeProjectId, config);
+    const run = await window.nexusAPI.pipeline.create(activeProjectId, config);
     addRun(run);
     setActiveRun(run.id);
     setShowNewRunForm(false);

@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useTerminalStore } from '@/stores/terminalStore';
 import type { MainTab } from '@/stores/uiStore';
 
 // ---------------------------------------------------------------------------
@@ -42,6 +43,7 @@ const TAB_KEY_MAP: Record<string, MainTab> = {
  * Shortcuts:
  *   Ctrl/Cmd + K         → toggle command palette
  *   Ctrl/Cmd + `         → toggle agent panel
+ *   Ctrl/Cmd + T         → new terminal tab
  *   Ctrl/Cmd + B         → switch to Branches tab
  *   Ctrl/Cmd + W         → switch to Worktrees tab
  *   Ctrl/Cmd + D         → switch to Diffs tab
@@ -51,9 +53,35 @@ const TAB_KEY_MAP: Record<string, MainTab> = {
  *   Ctrl/Cmd + 1-9       → switch to project by index (1-based)
  */
 export function useKeyboardShortcuts(): void {
-  const { toggleCommandPalette, toggleAgentPanel, setActiveTab, setLastKeyPressed } = useUIStore();
+  const { toggleCommandPalette, toggleAgentPanel, setActiveTab, setLastKeyPressed, addTerminalTab } = useUIStore();
   const projects = useProjectStore((s) => s.projects);
+  const activeProject = useProjectStore((s) => s.activeProject);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
+  const addSession = useTerminalStore((s) => s.addSession);
+
+  const createTerminalTab = useCallback(async () => {
+    if (activeProject === null) return;
+    if (!window.nexusAPI?.terminal) return;
+
+    const sessionId = await window.nexusAPI.terminal.create({
+      projectId: activeProject.id,
+      worktreePath: activeProject.path,
+      label: 'Shell',
+    });
+
+    addSession({
+      id: sessionId,
+      projectId: activeProject.id,
+      projectName: activeProject.name,
+      agentType: 'Shell',
+      label: 'Shell',
+      status: 'running',
+      worktreePath: activeProject.path,
+      startedAt: new Date().toISOString(),
+    });
+
+    addTerminalTab(sessionId, 'Shell');
+  }, [activeProject, addSession, addTerminalTab]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -74,6 +102,14 @@ export function useKeyboardShortcuts(): void {
         event.preventDefault();
         setLastKeyPressed('`');
         toggleAgentPanel();
+        return;
+      }
+
+      // Ctrl/Cmd + T — new terminal tab
+      if (key === 't') {
+        event.preventDefault();
+        setLastKeyPressed('t');
+        void createTerminalTab();
         return;
       }
 
@@ -116,5 +152,6 @@ export function useKeyboardShortcuts(): void {
     setLastKeyPressed,
     projects,
     setActiveProject,
+    createTerminalTab,
   ]);
 }

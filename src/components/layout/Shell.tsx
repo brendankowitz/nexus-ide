@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { ProjectRail } from '@/components/projects/ProjectRail';
@@ -10,10 +11,21 @@ import { DiffViewer } from '@/components/git/DiffViewer';
 import { CommitLog } from '@/components/git/CommitLog';
 import { PipelineView } from '@/components/pipeline/PipelineView';
 import { SettingsView } from '@/components/settings/SettingsView';
+import { TerminalTab } from '@/components/terminals/TerminalTab';
 
 export const Shell = (): React.JSX.Element => {
   const activeTab = useUIStore((s) => s.activeTab);
+  const terminalTabs = useUIStore((s) => s.terminalTabs);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
+
+  // Resolve terminal session id when active tab is a terminal tab
+  const terminalSessionId = useMemo(() => {
+    if (!activeTab.startsWith('terminal:')) return null;
+    const entry = terminalTabs.find((t) => t.id === activeTab);
+    return entry?.sessionId ?? null;
+  }, [activeTab, terminalTabs]);
+
+  const isTerminalTab = terminalSessionId !== null;
 
   return (
     <div className="flex h-[calc(100vh-var(--titlebar-height))]">
@@ -25,9 +37,11 @@ export const Shell = (): React.JSX.Element => {
         <TabBar />
 
         {/* Content views */}
-        <div className="flex-1 overflow-auto">
-          {activeProjectId === null ? (
+        <div className={`flex-1 overflow-hidden ${isTerminalTab ? '' : 'overflow-auto'}`}>
+          {activeProjectId === null && !isTerminalTab ? (
             <WelcomeScreen />
+          ) : isTerminalTab ? (
+            <TerminalTab sessionId={terminalSessionId} borderless />
           ) : (
             <>
               {activeTab === 'branches' && <BranchList />}

@@ -31,6 +31,7 @@ export const AgentPanel = (): React.JSX.Element => {
     for (const session of sessions) {
       if (session.status !== 'exited' && !subscribedRef.current.has(session.id)) {
         subscribedRef.current.add(session.id);
+        if (!window.nexusAPI?.terminal) continue;
         const cleanup = window.nexusAPI.terminal.onExit(session.id, () => {
           updateSession(session.id, { status: 'exited' });
           subscribedRef.current.delete(session.id);

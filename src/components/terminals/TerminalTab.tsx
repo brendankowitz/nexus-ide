@@ -6,9 +6,11 @@ import '@xterm/xterm/css/xterm.css';
 
 interface TerminalTabProps {
   sessionId: string;
+  /** When true, removes border/rounding for edge-to-edge rendering in main content area. */
+  borderless?: boolean;
 }
 
-export const TerminalTab = ({ sessionId }: TerminalTabProps): React.JSX.Element => {
+export const TerminalTab = ({ sessionId, borderless = false }: TerminalTabProps): React.JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -56,14 +58,17 @@ export const TerminalTab = ({ sessionId }: TerminalTabProps): React.JSX.Element 
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
+    // Guard: if nexusAPI isn't available, show local-only terminal
+    const api = window.nexusAPI?.terminal;
+
     // Forward PTY output to xterm
-    const cleanupData = window.nexusAPI.terminal.onData(sessionId, (data) => {
+    const cleanupData = api?.onData(sessionId, (data) => {
       term.write(data);
     });
 
     // Forward user keystrokes to PTY
     const onDataDisposable = term.onData((data) => {
-      window.nexusAPI.terminal.write(sessionId, data);
+      api?.write(sessionId, data);
     });
 
     // Sync terminal dimensions on resize
@@ -71,17 +76,17 @@ export const TerminalTab = ({ sessionId }: TerminalTabProps): React.JSX.Element 
       // Guard against zero-size container (e.g. collapsed panel)
       if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
       fitAddon.fit();
-      window.nexusAPI.terminal.resize(sessionId, term.cols, term.rows);
+      api?.resize(sessionId, term.cols, term.rows);
     });
     resizeObserver.observe(container);
 
     // Initial resize notification to PTY
-    window.nexusAPI.terminal.resize(sessionId, term.cols, term.rows);
+    api?.resize(sessionId, term.cols, term.rows);
 
     return () => {
       resizeObserver.disconnect();
       onDataDisposable.dispose();
-      cleanupData();
+      cleanupData?.();
       term.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -91,7 +96,9 @@ export const TerminalTab = ({ sessionId }: TerminalTabProps): React.JSX.Element 
   return (
     <div
       ref={containerRef}
-      className="h-full w-full overflow-hidden rounded-[var(--radius-md)] border border-border-subtle bg-[#0c0c0c]"
+      className={`h-full w-full overflow-hidden bg-[#0c0c0c] ${
+        borderless ? '' : 'rounded-[var(--radius-md)] border border-border-subtle'
+      }`}
     />
   );
 };

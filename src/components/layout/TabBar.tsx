@@ -1,6 +1,7 @@
+import { useCallback } from 'react';
 import { useUIStore, type MainTab } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { StatusDot } from '@/components/shared/StatusDot';
+import { useTerminalStore } from '@/stores/terminalStore';
 
 const GearIcon = (): React.JSX.Element => (
   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -21,13 +22,30 @@ const GearIcon = (): React.JSX.Element => (
   </svg>
 );
 
+const TerminalIcon = (): React.JSX.Element => (
+  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M4 6l3 2.5L4 11"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9 11h3"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
-interface TabDef {
+interface StaticTabDef {
   id: MainTab;
   label: string;
 }
 
-const tabs: TabDef[] = [
+const staticTabs: StaticTabDef[] = [
   { id: 'pipeline', label: 'pipeline' },
   { id: 'branches', label: 'branches' },
   { id: 'worktrees', label: 'worktrees' },
@@ -38,6 +56,13 @@ const tabs: TabDef[] = [
 export const TabBar = (): React.JSX.Element => {
   const activeTab = useUIStore((s) => s.activeTab);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const terminalTabs = useUIStore((s) => s.terminalTabs);
+  const addTerminalTab = useUIStore((s) => s.addTerminalTab);
+  const removeTerminalTab = useUIStore((s) => s.removeTerminalTab);
+
+  const activeProject = useProjectStore((s) => s.activeProject);
+  const addSession = useTerminalStore((s) => s.addSession);
+
   const gitStatus = useProjectStore((s) =>
     s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null
   );
@@ -47,11 +72,35 @@ export const TabBar = (): React.JSX.Element => {
 
   const isSettingsActive = activeTab === 'settings';
 
+  const handleNewTerminalTab = useCallback(async () => {
+    if (activeProject === null) return;
+    if (!window.nexusAPI?.terminal) return;
+
+    const sessionId = await window.nexusAPI.terminal.create({
+      projectId: activeProject.id,
+      worktreePath: activeProject.path,
+      label: 'Shell',
+    });
+
+    addSession({
+      id: sessionId,
+      projectId: activeProject.id,
+      projectName: activeProject.name,
+      agentType: 'Shell',
+      label: 'Shell',
+      status: 'running',
+      worktreePath: activeProject.path,
+      startedAt: new Date().toISOString(),
+    });
+
+    addTerminalTab(sessionId, 'Shell');
+  }, [activeProject, addSession, addTerminalTab]);
+
   return (
     <div className="flex h-[var(--tab-height)] items-stretch gap-0 border-b border-border-subtle bg-bg-void px-0.5">
-      {/* Main navigation tabs */}
-      <div className="flex flex-1 items-stretch">
-        {tabs.map((tab) => {
+      {/* Static navigation tabs */}
+      <div className="flex items-stretch">
+        {staticTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -78,7 +127,55 @@ export const TabBar = (): React.JSX.Element => {
         })}
       </div>
 
-      {/* Settings utility button -- right-aligned, not a regular tab */}
+      {/* Terminal tabs -- after static tabs, before spacer */}
+      {terminalTabs.length > 0 && (
+        <div className="flex items-stretch border-l border-border-subtle ml-0.5 pl-0.5">
+          {terminalTabs.map((tt) => {
+            const isActive = activeTab === tt.id;
+            return (
+              <button
+                key={tt.id}
+                onClick={() => setActiveTab(tt.id as MainTab)}
+                className={`group relative flex items-center gap-1 whitespace-nowrap border-none bg-transparent px-3 font-mono text-[11px] transition-colors duration-[var(--duration-fast)] cursor-pointer ${
+                  isActive
+                    ? 'font-medium text-text-primary'
+                    : 'font-normal text-text-quaternary hover:text-text-secondary'
+                }`}
+              >
+                <TerminalIcon />
+                <span className="opacity-80">{tt.label}</span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTerminalTab(tt.id);
+                  }}
+                  className="ml-1 flex h-[14px] w-[14px] items-center justify-center rounded-sm text-[10px] opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100 hover:bg-bg-active"
+                >
+                  x
+                </span>
+                {isActive && (
+                  <div className="absolute bottom-0 left-3 right-3 h-px bg-text-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* New terminal tab button */}
+      <button
+        onClick={() => { void handleNewTerminalTab(); }}
+        title="New terminal tab (Ctrl+T)"
+        className="flex items-center justify-center px-2 border-none bg-transparent text-text-ghost transition-colors duration-[var(--duration-fast)] cursor-pointer hover:text-text-secondary"
+      >
+        <TerminalIcon />
+        <span className="ml-0.5 text-[10px]">+</span>
+      </button>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Settings utility button -- right-aligned */}
       <button
         onClick={() => setActiveTab('settings')}
         title="Settings (Ctrl+,)"

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-export type MainTab = 'branches' | 'worktrees' | 'diffs' | 'log' | 'pipeline' | 'settings';
+/** Static tabs are fixed; terminal tabs use the `terminal:${sessionId}` pattern. */
+export type StaticTab = 'branches' | 'worktrees' | 'diffs' | 'log' | 'pipeline' | 'settings';
+export type MainTab = StaticTab | `terminal:${string}`;
+
+export interface TerminalTabEntry {
+  id: string;          // matches the `terminal:${sessionId}` pattern value
+  sessionId: string;   // terminal session id from terminalStore
+  label: string;       // display label (e.g. "Shell", "Claude Code")
+}
 
 interface UIState {
   activeTab: MainTab;
@@ -10,6 +18,7 @@ interface UIState {
   addProjectModalOpen: boolean;
   expandedDiffFiles: Record<string, boolean>;
   lastKeyPressed: string | null;
+  terminalTabs: TerminalTabEntry[];
 }
 
 interface UIActions {
@@ -23,6 +32,8 @@ interface UIActions {
   collapseDiffFile: (filePath: string) => void;
   isDiffFileExpanded: (filePath: string) => boolean;
   setLastKeyPressed: (key: string | null) => void;
+  addTerminalTab: (sessionId: string, label: string) => void;
+  removeTerminalTab: (id: string) => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -34,6 +45,7 @@ const initialState = {
   addProjectModalOpen: false,
   expandedDiffFiles: {} as Record<string, boolean>,
   lastKeyPressed: null,
+  terminalTabs: [],
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -89,6 +101,28 @@ export const useUIStore = create<UIStore>()(
     setLastKeyPressed: (key) =>
       set((state) => {
         state.lastKeyPressed = key;
+      }),
+
+    addTerminalTab: (sessionId, label) =>
+      set((state) => {
+        const id = `terminal:${sessionId}`;
+        const exists = state.terminalTabs.some((t) => t.id === id);
+        if (!exists) {
+          state.terminalTabs.push({ id, sessionId, label });
+        }
+        state.activeTab = id as MainTab;
+      }),
+
+    removeTerminalTab: (id) =>
+      set((state) => {
+        state.terminalTabs = state.terminalTabs.filter((t) => t.id !== id);
+        // If the closed tab was active, fall back to 'branches'
+        if (state.activeTab === id) {
+          const remaining = state.terminalTabs;
+          state.activeTab = remaining.length > 0
+            ? (remaining[remaining.length - 1].id as MainTab)
+            : 'branches';
+        }
       }),
   }))
 );
