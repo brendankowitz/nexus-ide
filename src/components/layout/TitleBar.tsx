@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useProjectStore } from '@/stores/projectStore';
+import { useProjectStore, selectActiveProject } from '@/stores/projectStore';
 
 export const TitleBar = (): React.JSX.Element => {
   const [clock, setClock] = useState(formatClock());
-  const activeProject = useProjectStore((s) => s.activeProject);
+  const activeProject = useProjectStore(selectActiveProject);
   const gitStatus = useProjectStore((s) =>
     s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null
   );

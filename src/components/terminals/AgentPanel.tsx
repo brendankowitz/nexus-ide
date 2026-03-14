@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useTerminalStore } from '@/stores/terminalStore';
-import { useProjectStore } from '@/stores/projectStore';
+import { useProjectStore, selectActiveProject } from '@/stores/projectStore';
 import { AgentCard, LaunchAgentCard } from '@/components/terminals/AgentCard';
 import { TerminalTab } from '@/components/terminals/TerminalTab';
 import { LaunchMenu } from '@/components/terminals/LaunchMenu';
@@ -17,7 +17,7 @@ export const AgentPanel = (): React.JSX.Element => {
   const updateSession = useTerminalStore((s) => s.updateSession);
   const removeSession = useTerminalStore((s) => s.removeSession);
 
-  const activeProject = useProjectStore((s) => s.activeProject);
+  const activeProject = useProjectStore(selectActiveProject);
 
   const [launchMenuOpen, setLaunchMenuOpen] = useState(false);
   const launchButtonRef = useRef<HTMLButtonElement>(null);

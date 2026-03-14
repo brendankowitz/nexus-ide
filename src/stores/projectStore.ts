@@ -25,14 +25,7 @@ interface ProjectActions {
   setWorktrees: (projectId: string, worktrees: Worktree[]) => void;
 }
 
-interface ProjectDerived {
-  readonly activeProject: Project | null;
-  readonly activeProjectBranches: Branch[];
-  readonly activeProjectWorktrees: Worktree[];
-  readonly activeProjectStatus: GitStatus | null;
-}
-
-type ProjectStore = ProjectState & ProjectActions & ProjectDerived;
+type ProjectStore = ProjectState & ProjectActions;
 
 const initialState = {
   projects: [],
@@ -43,28 +36,9 @@ const initialState = {
 } satisfies ProjectState;
 
 export const useProjectStore = create<ProjectStore>()(
-  immer((set, get) => ({
+  immer((set) => ({
     ...initialState,
 
-    // Derived getters
-    get activeProject(): Project | null {
-      const { projects, activeProjectId } = get();
-      return projects.find((p) => p.id === activeProjectId) ?? null;
-    },
-    get activeProjectBranches(): Branch[] {
-      const { branches, activeProjectId } = get();
-      return activeProjectId !== null ? (branches[activeProjectId] ?? []) : [];
-    },
-    get activeProjectWorktrees(): Worktree[] {
-      const { worktrees, activeProjectId } = get();
-      return activeProjectId !== null ? (worktrees[activeProjectId] ?? []) : [];
-    },
-    get activeProjectStatus(): GitStatus | null {
-      const { gitStatus, activeProjectId } = get();
-      return activeProjectId !== null ? (gitStatus[activeProjectId] ?? null) : null;
-    },
-
-    // Actions
     setProjects: (projects) =>
       set((state: ProjectState) => {
         state.projects = projects;
@@ -112,3 +86,23 @@ export const useProjectStore = create<ProjectStore>()(
 );
 
 export const getProjectState = useProjectStore.getState;
+
+/* ─── Derived selectors (use these instead of JS getters) ────────────────── */
+
+/** Select the active project. Use: useProjectStore(selectActiveProject) */
+export const selectActiveProject = (s: ProjectState): Project | null =>
+  s.activeProjectId !== null
+    ? s.projects.find((p) => p.id === s.activeProjectId) ?? null
+    : null;
+
+/** Select branches for the active project. */
+export const selectActiveBranches = (s: ProjectState): Branch[] =>
+  s.activeProjectId !== null ? (s.branches[s.activeProjectId] ?? []) : [];
+
+/** Select worktrees for the active project. */
+export const selectActiveWorktrees = (s: ProjectState): Worktree[] =>
+  s.activeProjectId !== null ? (s.worktrees[s.activeProjectId] ?? []) : [];
+
+/** Select git status for the active project. */
+export const selectActiveStatus = (s: ProjectState): GitStatus | null =>
+  s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null;

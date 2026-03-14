@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useUIStore } from '@/stores/uiStore';
-import { useProjectStore } from '@/stores/projectStore';
+import { useProjectStore, selectActiveProject } from '@/stores/projectStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import type { MainTab } from '@/stores/uiStore';
 
@@ -55,7 +55,7 @@ const TAB_KEY_MAP: Record<string, MainTab> = {
 export function useKeyboardShortcuts(): void {
   const { toggleCommandPalette, toggleAgentPanel, setActiveTab, setLastKeyPressed, addTerminalTab } = useUIStore();
   const projects = useProjectStore((s) => s.projects);
-  const activeProject = useProjectStore((s) => s.activeProject);
+  const activeProject = useProjectStore(selectActiveProject);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const addSession = useTerminalStore((s) => s.addSession);
 

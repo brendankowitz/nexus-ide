@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useUIStore, type MainTab } from '@/stores/uiStore';
-import { useProjectStore } from '@/stores/projectStore';
+import { useProjectStore, selectActiveProject } from '@/stores/projectStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 
 const GearIcon = (): React.JSX.Element => (
@@ -60,7 +60,7 @@ export const TabBar = (): React.JSX.Element => {
   const addTerminalTab = useUIStore((s) => s.addTerminalTab);
   const removeTerminalTab = useUIStore((s) => s.removeTerminalTab);
 
-  const activeProject = useProjectStore((s) => s.activeProject);
+  const activeProject = useProjectStore(selectActiveProject);
   const addSession = useTerminalStore((s) => s.addSession);
 
   const gitStatus = useProjectStore((s) =>
