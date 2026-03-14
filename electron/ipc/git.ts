@@ -11,7 +11,7 @@
  *   - Spawn options include windowsHide: true (handled inside dugite).
  */
 
-import { GitProcess } from 'dugite';
+import { exec as dugiteExec } from 'dugite';
 
 import type {
   Branch,
@@ -57,7 +57,7 @@ export async function execGit(
   args: string[],
 ): Promise<GitExecResult> {
   const normalizedPath = normalizePath(repoPath);
-  const result = await GitProcess.exec(args, normalizedPath);
+  const result = await dugiteExec(args, normalizedPath);
   return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode };
 }
 
