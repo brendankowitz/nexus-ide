@@ -20,6 +20,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   Branch,
+  ClaudeStatus,
   Commit,
   DiffFile,
   DiffHunk,
@@ -211,6 +212,14 @@ const nexusAPIImpl = {
       const channel = terminalExitChannel(sessionId);
       const listener = (_event: Electron.IpcRendererEvent, code: number): void => {
         callback(code);
+      };
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onClaudeStatus(sessionId: string, callback: (status: ClaudeStatus) => void): () => void {
+      const channel = `terminal:claude-status:${sessionId}`;
+      const listener = (_event: Electron.IpcRendererEvent, status: ClaudeStatus): void => {
+        callback(status);
       };
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);

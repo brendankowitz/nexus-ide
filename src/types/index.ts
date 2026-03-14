@@ -148,6 +148,12 @@ export interface PipelineRun {
 
 // ── Terminal ─────────────────────────────────────
 
+export interface ClaudeStatus {
+  model?: string;
+  contextPercent?: number;
+  tokens?: number;
+}
+
 export interface TerminalSession {
   id: string;
   projectId: string;
@@ -159,6 +165,8 @@ export interface TerminalSession {
   branch?: string;
   command?: string;
   startedAt: string;
+  sessionType?: 'claude' | 'copilot' | 'aider' | 'shell';
+  claudeStatus?: ClaudeStatus;
 }
 
 // ── Command Palette ──────────────────────────────
@@ -314,6 +322,7 @@ export interface NexusAPI {
     list(): Promise<TerminalSession[]>;
     onData(sessionId: string, callback: (data: string) => void): () => void;
     onExit(sessionId: string, callback: (code: number) => void): () => void;
+    onClaudeStatus(sessionId: string, callback: (status: ClaudeStatus) => void): () => void;
   };
 
   // Pipeline engine

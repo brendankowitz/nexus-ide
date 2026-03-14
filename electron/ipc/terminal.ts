@@ -54,8 +54,11 @@ interface SessionEntry {
   ptyProcess: pty.IPty | null;
   status: 'running' | 'idle' | 'exited';
   exitCode: number | undefined;
+  sessionType: 'claude' | 'copilot' | 'aider' | 'shell';
+  claudeStatus: { model?: string; contextPercent?: number; tokens?: number };
   dataListeners: Array<(data: string) => void>;
   exitListeners: Array<(code: number) => void>;
+  claudeStatusListeners: Array<(status: { model?: string; contextPercent?: number; tokens?: number }) => void>;
 }
 
 const sessions = new Map<string, SessionEntry>();
@@ -74,6 +77,14 @@ export function createSession(options: TerminalOptions): string {
   const args = options.args ?? [];
   const cwd = (options.cwd ?? options.worktreePath ?? process.cwd()).replace(/\\/g, '/');
 
+  // Detect session type from command name
+  const commandBase = shell.replace(/\\/g, '/').split('/').pop()?.replace(/\.exe$/i, '') ?? shell;
+  const sessionType: SessionEntry['sessionType'] =
+    commandBase === 'claude' ? 'claude'
+    : commandBase === 'copilot' ? 'copilot'
+    : commandBase === 'aider' ? 'aider'
+    : 'shell';
+
   const entry: SessionEntry = {
     id,
     projectId: options.projectId,
@@ -84,8 +95,11 @@ export function createSession(options: TerminalOptions): string {
     ptyProcess: null,
     status: 'running',
     exitCode: undefined,
+    sessionType,
+    claudeStatus: {},
     dataListeners: [],
     exitListeners: [],
+    claudeStatusListeners: [],
   };
 
   const ptyProcess = pty.spawn(shell, args, {
@@ -102,6 +116,10 @@ export function createSession(options: TerminalOptions): string {
   ptyProcess.onData((data) => {
     for (const cb of entry.dataListeners) {
       cb(data);
+    }
+    // Best-effort Claude status parsing for Claude Code sessions
+    if (entry.sessionType === 'claude') {
+      parseClaudeStatus(entry, data);
     }
   });
 
@@ -162,6 +180,7 @@ export async function killSession(sessionId: string): Promise<void> {
 
   entry.dataListeners.length = 0;
   entry.exitListeners.length = 0;
+  entry.claudeStatusListeners.length = 0;
   sessions.delete(sessionId);
 }
 
@@ -182,6 +201,8 @@ export function listSessions(): TerminalSession[] {
       status: e.status,
       command: e.command,
       startedAt: e.createdAt,
+      sessionType: e.sessionType,
+      claudeStatus: Object.keys(e.claudeStatus).length > 0 ? e.claudeStatus : undefined,
     }));
 }
 
@@ -230,5 +251,89 @@ export function onSessionExit(
   return () => {
     const idx = entry.exitListeners.indexOf(callback);
     if (idx !== -1) entry.exitListeners.splice(idx, 1);
+  };
+}
+
+/* ─── parseClaudeStatus (internal) ────────────────────────────────────────── */
+
+// Strip ANSI escape sequences for plain-text parsing
+const ANSI_STRIP_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+
+/**
+ * Best-effort heuristic parser for Claude Code terminal output.
+ * Looks for model names and context/token indicators in PTY data chunks.
+ * Fires claudeStatusListeners when new information is parsed.
+ */
+function parseClaudeStatus(
+  entry: SessionEntry,
+  data: string,
+): void {
+  const plain = data.replace(ANSI_STRIP_RE, '');
+
+  let changed = false;
+
+  // Model detection — e.g. "claude-sonnet-4-5", "claude-opus-4", "Sonnet", "Opus", "Haiku"
+  const modelMatch = plain.match(
+    /claude[-\s]?(opus|sonnet|haiku)[-\s]?[\d.-]*/i,
+  ) ?? plain.match(/\b(opus|sonnet|haiku)\b/i);
+  if (modelMatch !== null) {
+    const raw = modelMatch[0].toLowerCase();
+    // Normalise to a short display label
+    const normalized = raw.startsWith('claude') ? raw : `claude-${raw}`;
+    if (entry.claudeStatus.model !== normalized) {
+      entry.claudeStatus.model = normalized;
+      changed = true;
+    }
+  }
+
+  // Context percent — e.g. "context: 42%" or "42% context" or "context window: 42%"
+  const pctMatch = plain.match(/context[^0-9]*(\d{1,3})\s*%/i)
+    ?? plain.match(/(\d{1,3})\s*%\s*context/i);
+  if (pctMatch !== null) {
+    const pct = parseInt(pctMatch[1], 10);
+    if (!isNaN(pct) && pct >= 0 && pct <= 100 && entry.claudeStatus.contextPercent !== pct) {
+      entry.claudeStatus.contextPercent = pct;
+      changed = true;
+    }
+  }
+
+  // Token count — e.g. "12,345 tokens" or "tokens: 12345"
+  const tokMatch = plain.match(/(\d[\d,]+)\s*tokens?/i)
+    ?? plain.match(/tokens?[:\s]+(\d[\d,]+)/i);
+  if (tokMatch !== null) {
+    const tk = parseInt(tokMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(tk) && entry.claudeStatus.tokens !== tk) {
+      entry.claudeStatus.tokens = tk;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    const snapshot = { ...entry.claudeStatus };
+    for (const cb of entry.claudeStatusListeners) {
+      cb(snapshot);
+    }
+  }
+}
+
+/* ─── onSessionClaudeStatus ────────────────────────────────────────────────── */
+
+/**
+ * Subscribe to parsed Claude status updates for a session.
+ * Only fires for sessions with sessionType === 'claude'.
+ *
+ * @returns Unsubscribe function.
+ */
+export function onSessionClaudeStatus(
+  sessionId: string,
+  callback: (status: { model?: string; contextPercent?: number; tokens?: number }) => void,
+): () => void {
+  const entry = sessions.get(sessionId);
+  if (!entry) return () => { /* no-op */ };
+
+  entry.claudeStatusListeners.push(callback);
+  return () => {
+    const idx = entry.claudeStatusListeners.indexOf(callback);
+    if (idx !== -1) entry.claudeStatusListeners.splice(idx, 1);
   };
 }

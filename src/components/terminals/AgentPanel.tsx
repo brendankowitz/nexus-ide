@@ -163,7 +163,10 @@ export const AgentPanel = (): React.JSX.Element => {
             </span>
           </div>
         ) : (
-          <TerminalTab sessionId={activeSessionId} />
+          <TerminalTab
+          sessionId={activeSessionId}
+          onKill={() => void handleKill(activeSessionId)}
+        />
         )}
       </div>
     </div>
