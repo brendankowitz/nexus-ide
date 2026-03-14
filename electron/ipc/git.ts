@@ -468,7 +468,8 @@ function parseUnifiedDiff(diffOutput: string): DiffHunk[] {
 }
 
 /**
- * Get diff hunks for a specific file. Tries unstaged first, then staged.
+ * Get diff hunks for a specific file.
+ * Tries: unstaged diff → staged diff → untracked (full file as added).
  */
 export async function getDiffHunks(
   projectPath: string,
@@ -481,10 +482,34 @@ export async function getDiffHunks(
       return parseUnifiedDiff(unstaged.stdout);
     }
 
-    // Fall back to staged diff
+    // Try staged diff
     const staged = await execGit(projectPath, ['diff', '--cached', '-U3', '--', filePath]);
     if (staged.stdout.trim()) {
       return parseUnifiedDiff(staged.stdout);
+    }
+
+    // For untracked/newly added files, show full content as all-added lines
+    const show = await execGit(projectPath, ['show', `HEAD:${normalizePath(filePath)}`]);
+    if (show.exitCode !== 0) {
+      // File doesn't exist in HEAD -- it's new. Read the working tree file directly.
+      const { readFileSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      try {
+        const fullPath = join(projectPath, filePath).replace(/\\/g, '/');
+        const content = readFileSync(fullPath, 'utf8');
+        const lines = content.split(/\r?\n/);
+        const diffLines: DiffLine[] = lines.map((line, i) => ({
+          type: 'added' as const,
+          content: line,
+          newLineNumber: i + 1,
+        }));
+        return [{
+          header: `@@ -0,0 +1,${lines.length} @@ (new file)`,
+          lines: diffLines,
+        }];
+      } catch {
+        return [];
+      }
     }
 
     return [];
