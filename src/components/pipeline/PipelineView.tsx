@@ -198,7 +198,17 @@ export const PipelineView = (): React.JSX.Element => {
   /* ── Empty state ───────────────────────────────────────────────────────── */
 
   if (resolvedActiveRunId === null || activeRun === null) {
-    return <PipelineEmptyState onCreateRun={() => { setShowNewRunForm(true); }} />;
+    return (
+      <div className="flex h-full flex-col">
+        {showNewRunForm ? (
+          <div className="p-6">
+            <NewRunForm onSubmit={handleNewRun} onCancel={() => setShowNewRunForm(false)} />
+          </div>
+        ) : (
+          <PipelineEmptyState onCreateRun={() => { setShowNewRunForm(true); }} />
+        )}
+      </div>
+    );
   }
 
   /* ── Main layout ───────────────────────────────────────────────────────── */

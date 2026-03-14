@@ -48,14 +48,22 @@ export const LaunchMenu = ({
   const [customCommand, setCustomCommand] = useState('');
   const [position, setPosition] = useState<{ bottom: number; left: number } | null>(null);
 
-  // Calculate fixed position above anchor button
+  // Calculate fixed position above anchor button, clamped to viewport
   useLayoutEffect(() => {
     if (anchorRef.current === null) return;
     const rect = anchorRef.current.getBoundingClientRect();
-    // Position menu above the button: bottom of viewport minus top of button, plus 8px gap
+    const menuWidth = 280; // approximate menu width
+    // Position menu above the button
+    let left = rect.left;
+    // Clamp to right edge of viewport with 12px padding
+    if (left + menuWidth > window.innerWidth - 12) {
+      left = window.innerWidth - menuWidth - 12;
+    }
+    // Don't go past left edge
+    if (left < 12) left = 12;
     setPosition({
       bottom: window.innerHeight - rect.top + 8,
-      left: rect.left,
+      left,
     });
   }, [anchorRef]);
 
