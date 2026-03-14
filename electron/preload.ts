@@ -76,6 +76,7 @@ const CH = {
   PIPELINE_START: 'pipeline:start',
   PIPELINE_ABORT: 'pipeline:abort',
   PIPELINE_LIST: 'pipeline:list',
+  PIPELINE_RUN_VALIDATE_STEP: 'pipeline:run-validate-step',
 
   PLUGINS_LIST: 'plugins:list',
   PLUGINS_LOAD_USER: 'plugins:load-user',
@@ -237,6 +238,9 @@ const nexusAPIImpl = {
     },
     abort(runId: string): Promise<void> {
       return ipcRenderer.invoke(CH.PIPELINE_ABORT, runId) as Promise<void>;
+    },
+    runValidateStep(runId: string, stepIndex: number): Promise<void> {
+      return ipcRenderer.invoke(CH.PIPELINE_RUN_VALIDATE_STEP, runId, stepIndex) as Promise<void>;
     },
     list(projectId: string): Promise<PipelineRun[]> {
       return ipcRenderer.invoke(CH.PIPELINE_LIST, projectId) as Promise<PipelineRun[]>;

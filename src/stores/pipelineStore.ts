@@ -10,6 +10,7 @@ interface PipelineState {
 interface PipelineActions {
   addRun: (run: PipelineRun) => void;
   updateRun: (id: string, patch: Partial<PipelineRun>) => void;
+  replaceRun: (run: PipelineRun) => void;
   removeRun: (id: string) => void;
   setActiveRun: (id: string | null) => void;
 }
@@ -62,6 +63,16 @@ export const usePipelineStore = create<PipelineStore>()(
               (run as any)[key] = patch[key]; // eslint-disable-line @typescript-eslint/no-explicit-any
             }
           }
+        }
+      }),
+
+    replaceRun: (incoming) =>
+      set((state: PipelineState) => {
+        const idx = state.runs.findIndex((r) => r.id === incoming.id);
+        if (idx !== -1) {
+          state.runs[idx] = incoming;
+        } else {
+          state.runs.push(incoming);
         }
       }),
 

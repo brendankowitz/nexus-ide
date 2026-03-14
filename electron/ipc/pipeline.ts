@@ -179,6 +179,74 @@ export async function startPhase(runId: string, phase: Phase): Promise<void> {
   }
 }
 
+/* ─── runValidateStep ──────────────────────────────────────────────────────── */
+
+/**
+ * Run a single validation step by index within the validate phase.
+ * Spawns a PTY session for the step and streams output.
+ */
+export async function runValidateStep(
+  runId: string,
+  stepIndex: number,
+): Promise<void> {
+  const run = runs.get(runId);
+  if (!run) throw new Error(`Run not found: ${runId}`);
+
+  const validate = run.phases.validate;
+  if (!validate) throw new Error(`Validate phase not initialized for run: ${runId}`);
+
+  const step = validate.steps[stepIndex];
+  if (!step) throw new Error(`Validate step ${stepIndex} not found in run: ${runId}`);
+
+  step.status = 'running';
+  step.iteration = (step.iteration ?? 0) + 1;
+
+  pushUpdate(runId, {
+    runId,
+    type: 'phase-start',
+    phase: 'validate',
+    run: { ...run },
+  });
+
+  const sessionId = createSession({
+    projectId: run.config.projectId,
+    worktreePath: run.config.worktreePath ?? '',
+    command: 'claude',
+    args: ['-p', `Running validation step: ${step.pluginId} for run: ${run.config.name}`],
+    label: `validate: ${step.pluginId}`,
+  });
+
+  step.terminalSessionId = sessionId;
+
+  let output = '';
+  onSessionData(sessionId, (data) => {
+    output += data;
+    step.output = output;
+    pushUpdate(runId, { runId, type: 'output', phase: 'validate', data });
+  });
+
+  onSessionExit(sessionId, (code) => {
+    step.status = code === 0 ? 'passed' : 'failed';
+
+    // Check if all steps are done
+    const allDone = validate.steps.every(
+      (s) => s.status === 'passed' || s.status === 'failed' || s.status === 'skipped',
+    );
+    if (allDone) {
+      const anyFailed = validate.steps.some((s) => s.status === 'failed');
+      validate.status = anyFailed ? 'failed' : 'complete';
+      run.status = anyFailed ? 'failed' : 'complete';
+    }
+
+    pushUpdate(runId, {
+      runId,
+      type: 'phase-end',
+      phase: 'validate',
+      run: { ...run },
+    });
+  });
+}
+
 /* ─── abortPipelineRun ─────────────────────────────────────────────────────── */
 
 export function abortPipelineRun(runId: string): void {

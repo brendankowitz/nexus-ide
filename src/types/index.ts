@@ -330,6 +330,7 @@ export interface NexusAPI {
     create(projectId: string, config: PipelineConfig): Promise<PipelineRun>;
     start(runId: string, phase: Phase): Promise<void>;
     abort(runId: string): Promise<void>;
+    runValidateStep(runId: string, stepIndex: number): Promise<void>;
     list(projectId: string): Promise<PipelineRun[]>;
     onUpdate(runId: string, callback: (update: PipelineUpdate) => void): () => void;
   };

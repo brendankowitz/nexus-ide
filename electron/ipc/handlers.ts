@@ -84,6 +84,7 @@ import {
   listPipelineRuns,
   startPhase,
   abortPipelineRun,
+  runValidateStep,
 } from './pipeline.js';
 
 import { listPlugins } from './plugins.js';
@@ -141,6 +142,7 @@ export const IPC_CHANNELS = {
   PIPELINE_START: 'pipeline:start',
   PIPELINE_ABORT: 'pipeline:abort',
   PIPELINE_LIST: 'pipeline:list',
+  PIPELINE_RUN_VALIDATE_STEP: 'pipeline:run-validate-step',
 
   PLUGINS_LIST: 'plugins:list',
   PLUGINS_LOAD_USER: 'plugins:load-user',
@@ -633,6 +635,17 @@ export function registerIpcHandlers(): void {
         return listPipelineRuns(projectId);
       } catch (err) {
         throwIpcError('PIPELINE_LIST_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.PIPELINE_RUN_VALIDATE_STEP,
+    async (_event, runId: string, stepIndex: number): Promise<void> => {
+      try {
+        await runValidateStep(runId, stepIndex);
+      } catch (err) {
+        throwIpcError('PIPELINE_RUN_VALIDATE_STEP_FAILED', err);
       }
     },
   );
