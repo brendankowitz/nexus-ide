@@ -1,0 +1,46 @@
+appId: com.nexus.ide
+productName: Nexus IDE
+copyright: Copyright © 2025-2026 Nexus IDE Contributors
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist-electron/**/*
+  - dist/**/*
+
+asar: true
+asarUnpack:
+  - "node_modules/@lydell/node-pty/**"
+  - "node_modules/dugite/**"
+  - "node_modules/@parcel/watcher/**"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.icns
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build/icon.png
+  category: Development

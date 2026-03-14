@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════
+   NEXUS DESIGN SYSTEM — CSS CUSTOM PROPERTIES
+   ═══════════════════════════════════════════════════ */
+:root {
+  /* Surfaces — layered depth system */
+  --bg-void: #06060c;
+  --bg-base: #0a0a14;
+  --bg-raised: #0f0f1a;
+  --bg-surface: #141420;
+  --bg-overlay: #1a1a2a;
+  --bg-hover: #1e1e30;
+  --bg-active: #252538;
+
+  /* Text hierarchy */
+  --text-primary: #d4d4e0;
+  --text-secondary: #8b8ba0;
+  --text-tertiary: #55556a;
+  --text-ghost: #3a3a50;
+
+  /* Phase accent system — the signature */
+  --phase-plan: #7F77DD;
+  --phase-plan-dim: #7F77DD40;
+  --phase-plan-glow: #7F77DD18;
+  --phase-execute: #1D9E75;
+  --phase-execute-dim: #1D9E7540;
+  --phase-execute-glow: #1D9E7518;
+  --phase-validate: #D85A30;
+  --phase-validate-dim: #D85A3040;
+  --phase-validate-glow: #D85A3018;
+
+  /* Semantic colors */
+  --color-added: #2ea043;
+  --color-added-bg: #2ea04315;
+  --color-deleted: #da3633;
+  --color-deleted-bg: #da363315;
+  --color-modified: #d29922;
+  --color-info: #58a6ff;
+  --color-clean: #1D9E75;
+  --color-danger: #f85149;
+  --color-warning: #d29922;
+
+  /* Borders */
+  --border-subtle: #ffffff08;
+  --border-default: #ffffff12;
+  --border-strong: #ffffff20;
+
+  /* Dimensions */
+  --rail-width: 220px;
+  --titlebar-height: 36px;
+  --tab-height: 38px;
+  --agent-panel-collapsed: 42px;
+  --agent-panel-expanded: 260px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Type scale */
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Fira Code', monospace;
+  --font-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --text-xxs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-lg: 14px;
+  --text-xl: 16px;
+  --text-2xl: 20px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --duration-slow: 250ms;
+}
+
+/* ═══════════════════════════════════════════════════
+   TAILWIND v4 THEME INTEGRATION
+   ═══════════════════════════════════════════════════ */
+@theme {
+  /* Surface colors */
+  --color-bg-void: var(--bg-void);
+  --color-bg-base: var(--bg-base);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-overlay: var(--bg-overlay);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
+
+  /* Text hierarchy */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-ghost: var(--text-ghost);
+
+  /* Phase accents */
+  --color-phase-plan: var(--phase-plan);
+  --color-phase-plan-dim: var(--phase-plan-dim);
+  --color-phase-plan-glow: var(--phase-plan-glow);
+  --color-phase-execute: var(--phase-execute);
+  --color-phase-execute-dim: var(--phase-execute-dim);
+  --color-phase-execute-glow: var(--phase-execute-glow);
+  --color-phase-validate: var(--phase-validate);
+  --color-phase-validate-dim: var(--phase-validate-dim);
+  --color-phase-validate-glow: var(--phase-validate-glow);
+
+  /* Semantic (use --color-sem-* to avoid self-referencing :root --color-* vars) */
+  --color-sem-added: #2ea043;
+  --color-sem-added-bg: #2ea04315;
+  --color-sem-deleted: #da3633;
+  --color-sem-deleted-bg: #da363315;
+  --color-sem-modified: #d29922;
+  --color-sem-info: #58a6ff;
+  --color-sem-clean: #1D9E75;
+  --color-sem-danger: #f85149;
+  --color-sem-warning: #d29922;
+
+  /* Border */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Fonts */
+  --font-family-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Fira Code', monospace;
+  --font-family-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════ */
+html {
+  font-size: var(--text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBAR STYLES
+   ═══════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ═══════════════════════════════════════════════════
+   NOISE TEXTURE OVERLAY
+   ═══════════════════════════════════════════════════ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* ═══════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════ */
+@keyframes palette-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

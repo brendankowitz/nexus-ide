@@ -1,0 +1,673 @@
+/**
+ * electron/ipc/git.ts
+ *
+ * Git operations wrapper using dugite for real git execution.
+ * dugite bundles its own git binary; GitProcess.exec(args, path) returns
+ * { stdout, stderr, exitCode }.
+ *
+ * Windows notes:
+ *   - All paths are normalized to forward slashes before passing to git.
+ *   - All output parsing uses \r?\n for CRLF-safe line splitting.
+ *   - Spawn options include windowsHide: true (handled inside dugite).
+ */
+
+import { GitProcess } from 'dugite';
+
+import type {
+  Branch,
+  Commit,
+  DiffFile,
+  DiffHunk,
+  DiffLine,
+  GitStatus,
+  Worktree,
+} from '../../src/types/index.js';
+
+/* ─── Path helpers ─────────────────────────────────────────────────────────── */
+
+/** Normalize a filesystem path to forward slashes for git consumption. */
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/');
+}
+
+/** Split git output safely on both LF and CRLF, filtering trailing empties. */
+function splitLines(output: string): string[] {
+  if (!output.trim()) return [];
+  const lines = output.split(/\r?\n/);
+  // Remove trailing empty string from split
+  if (lines.length > 0 && lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+  return lines;
+}
+
+/* ─── Low-level executor ───────────────────────────────────────────────────── */
+
+export interface GitExecResult {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number;
+}
+
+/**
+ * Execute a git command in the given repository path.
+ */
+export async function execGit(
+  repoPath: string,
+  args: string[],
+): Promise<GitExecResult> {
+  const normalizedPath = normalizePath(repoPath);
+  const result = await GitProcess.exec(args, normalizedPath);
+  return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode };
+}
+
+/* ─── getStatus ────────────────────────────────────────────────────────────── */
+
+/**
+ * Parse `git status --porcelain=v1 -b` output into a structured GitStatus.
+ */
+export async function getStatus(projectPath: string): Promise<GitStatus> {
+  try {
+    const result = await execGit(projectPath, ['status', '--porcelain=v1', '-b']);
+    if (result.exitCode !== 0) {
+      return { branch: '', changeCount: 0, staged: 0, unstaged: 0, untracked: 0, ahead: 0, behind: 0 };
+    }
+
+    const lines = splitLines(result.stdout);
+    let branch = '';
+    let ahead = 0;
+    let behind = 0;
+    let staged = 0;
+    let unstaged = 0;
+    let untracked = 0;
+
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
+        // Parse branch line: ## branch...tracking [ahead N, behind M]
+        const branchLine = line.slice(3);
+        const dotIndex = branchLine.indexOf('...');
+        if (dotIndex !== -1) {
+          branch = branchLine.slice(0, dotIndex);
+        } else {
+          // No tracking info, might have additional info after space
+          const spaceIdx = branchLine.indexOf(' ');
+          branch = spaceIdx !== -1 ? branchLine.slice(0, spaceIdx) : branchLine;
+        }
+
+        const aheadMatch = /\[.*?ahead (\d+)/.exec(branchLine);
+        const behindMatch = /\[.*?behind (\d+)/.exec(branchLine);
+        if (aheadMatch) ahead = parseInt(aheadMatch[1], 10);
+        if (behindMatch) behind = parseInt(behindMatch[1], 10);
+        continue;
+      }
+
+      if (line.length < 2) continue;
+
+      const x = line[0];
+      const y = line[1];
+
+      if (x === '?' && y === '?') {
+        untracked++;
+        continue;
+      }
+
+      // Staged: X is not ' ' and not '?'
+      if (x !== ' ' && x !== '?') {
+        staged++;
+      }
+
+      // Unstaged: Y is not ' ' and not '?'
+      if (y !== ' ' && y !== '?') {
+        unstaged++;
+      }
+    }
+
+    const changeCount = staged + unstaged + untracked;
+    return { branch, changeCount, staged, unstaged, untracked, ahead, behind };
+  } catch {
+    return { branch: '', changeCount: 0, staged: 0, unstaged: 0, untracked: 0, ahead: 0, behind: 0 };
+  }
+}
+
+/* ─── getBranches ──────────────────────────────────────────────────────────── */
+
+/**
+ * List local branches with tracking information.
+ */
+export async function getBranches(projectPath: string): Promise<Branch[]> {
+  try {
+    const result = await execGit(projectPath, [
+      'branch',
+      '-vv',
+      '--format=%(refname:short)|%(HEAD)|%(upstream:short)|%(upstream:track)',
+    ]);
+    if (result.exitCode !== 0) return [];
+
+    const lines = splitLines(result.stdout);
+    const branches: Branch[] = [];
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      const parts = line.split('|');
+      if (parts.length < 4) continue;
+
+      if (!parts[0]?.trim()) continue;
+      const name = parts[0].trim();
+      const isHead = parts[1]?.trim() === '*';
+      const upstream = parts[2]?.trim() || undefined;
+      const track = parts[3];
+
+      let ahead = 0;
+      let behind = 0;
+
+      if (track) {
+        const aheadMatch = /ahead (\d+)/.exec(track);
+        const behindMatch = /behind (\d+)/.exec(track);
+        if (aheadMatch) ahead = parseInt(aheadMatch[1], 10);
+        if (behindMatch) behind = parseInt(behindMatch[1], 10);
+      }
+
+      branches.push({ name, isHead, upstream, ahead, behind });
+    }
+
+    return branches;
+  } catch {
+    return [];
+  }
+}
+
+/* ─── getWorktrees ─────────────────────────────────────────────────────────── */
+
+/**
+ * Parse `git worktree list --porcelain` output into a Worktree array.
+ */
+export async function getWorktrees(projectPath: string): Promise<Worktree[]> {
+  try {
+    const result = await execGit(projectPath, ['worktree', 'list', '--porcelain']);
+    if (result.exitCode !== 0) return [];
+
+    const output = result.stdout.trim();
+    if (!output) return [];
+
+    // Split into blocks separated by empty lines
+    const blocks = output.split(/\r?\n\r?\n/);
+    const worktrees: Worktree[] = [];
+    let isFirst = true;
+
+    for (const block of blocks) {
+      const blockLines = splitLines(block);
+      let wtPath = '';
+      let branch = '';
+
+      for (const bLine of blockLines) {
+        if (bLine.startsWith('worktree ')) {
+          wtPath = normalizePath(bLine.slice(9));
+        } else if (bLine.startsWith('branch refs/heads/')) {
+          branch = bLine.slice(18);
+        } else if (bLine === 'detached') {
+          branch = 'HEAD (detached)';
+        }
+      }
+
+      if (!wtPath) continue;
+
+      // Check if worktree is dirty
+      let isDirty = false;
+      try {
+        const statusResult = await execGit(wtPath, ['status', '--porcelain']);
+        isDirty = statusResult.exitCode === 0 && statusResult.stdout.trim().length > 0;
+      } catch {
+        // If we can't check, assume not dirty
+      }
+
+      worktrees.push({
+        path: wtPath,
+        branch,
+        isMainWorktree: isFirst,
+        isDirty,
+      });
+      isFirst = false;
+    }
+
+    return worktrees;
+  } catch {
+    return [];
+  }
+}
+
+/* ─── createWorktree ───────────────────────────────────────────────────────── */
+
+/**
+ * Run `git worktree add <targetPath> <branch>`.
+ */
+export async function createWorktree(
+  projectPath: string,
+  branch: string,
+  targetPath?: string,
+): Promise<Worktree> {
+  const normalizedRoot = normalizePath(projectPath);
+  const resolved = targetPath
+    ? normalizePath(targetPath)
+    : `${normalizedRoot}-${branch.replace(/\//g, '-')}`;
+
+  const result = await execGit(projectPath, ['worktree', 'add', resolved, branch]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to create worktree');
+  }
+
+  // Find the new worktree in the list
+  const worktrees = await getWorktrees(projectPath);
+  const created = worktrees.find((wt) => normalizePath(wt.path) === resolved);
+  if (created) return created;
+
+  // Fallback if not found in list (shouldn't happen)
+  return {
+    path: resolved,
+    branch,
+    isMainWorktree: false,
+    isDirty: false,
+  };
+}
+
+/* ─── removeWorktree ───────────────────────────────────────────────────────── */
+
+/**
+ * Run `git worktree remove <worktreePath> --force`.
+ */
+export async function removeWorktree(
+  projectPath: string,
+  worktreePath: string,
+): Promise<void> {
+  const result = await execGit(projectPath, [
+    'worktree', 'remove', normalizePath(worktreePath), '--force',
+  ]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to remove worktree');
+  }
+}
+
+/* ─── checkout ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git checkout <branch>`.
+ */
+export async function checkout(
+  projectPath: string,
+  branch: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['checkout', branch]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to checkout branch');
+  }
+}
+
+/* ─── getDiff ──────────────────────────────────────────────────────────────── */
+
+/** Map porcelain status codes to our DiffFile status type. */
+function mapStatus(code: string): 'M' | 'A' | 'D' | 'R' {
+  if (code.startsWith('R')) return 'R';
+  if (code === 'A' || code === '?') return 'A';
+  if (code === 'D') return 'D';
+  return 'M';
+}
+
+/**
+ * Combine staged and unstaged diffs into a DiffFile array.
+ */
+export async function getDiff(projectPath: string): Promise<DiffFile[]> {
+  try {
+    const [unstagedResult, stagedResult, statusResult] = await Promise.all([
+      execGit(projectPath, ['diff', '--numstat']),
+      execGit(projectPath, ['diff', '--cached', '--numstat']),
+      execGit(projectPath, ['status', '--porcelain=v1']),
+    ]);
+
+    // Build a map of file statuses from porcelain output
+    const statusMap = new Map<string, { x: string; y: string }>();
+    for (const line of splitLines(statusResult.stdout)) {
+      if (line.length < 3) continue;
+      const x = line[0];
+      const y = line[1];
+      const filePath = line.slice(3).trim();
+      // Handle renames: "R  old -> new"
+      const arrowIdx = filePath.indexOf(' -> ');
+      const actualPath = arrowIdx !== -1 ? filePath.slice(arrowIdx + 4) : filePath;
+      statusMap.set(actualPath, { x, y });
+    }
+
+    const fileMap = new Map<string, DiffFile>();
+
+    // Parse unstaged numstat
+    for (const line of splitLines(unstagedResult.stdout)) {
+      if (!line.trim()) continue;
+      const parts = line.split('\t');
+      if (parts.length < 3) continue;
+      const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
+      const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+      const filePath = parts.slice(2).join('\t'); // filenames can have tabs (unlikely, but safe)
+
+      const st = statusMap.get(filePath);
+      const statusCode = st ? mapStatus(st.y) : 'M';
+
+      const existing = fileMap.get(filePath);
+      if (existing) {
+        existing.additions += additions;
+        existing.deletions += deletions;
+      } else {
+        fileMap.set(filePath, {
+          filePath,
+          status: statusCode,
+          additions,
+          deletions,
+          hunks: [],
+        });
+      }
+    }
+
+    // Parse staged numstat
+    for (const line of splitLines(stagedResult.stdout)) {
+      if (!line.trim()) continue;
+      const parts = line.split('\t');
+      if (parts.length < 3) continue;
+      const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
+      const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+      const filePath = parts.slice(2).join('\t');
+
+      const st = statusMap.get(filePath);
+      const statusCode = st ? mapStatus(st.x) : 'M';
+
+      const existing = fileMap.get(filePath);
+      if (existing) {
+        existing.additions += additions;
+        existing.deletions += deletions;
+      } else {
+        fileMap.set(filePath, {
+          filePath,
+          status: statusCode,
+          additions,
+          deletions,
+          hunks: [],
+        });
+      }
+    }
+
+    // Also add untracked files from status that won't appear in numstat
+    for (const [filePath, st] of statusMap) {
+      if (st.x === '?' && st.y === '?' && !fileMap.has(filePath)) {
+        fileMap.set(filePath, {
+          filePath,
+          status: 'A',
+          additions: 0,
+          deletions: 0,
+          hunks: [],
+        });
+      }
+    }
+
+    return Array.from(fileMap.values());
+  } catch {
+    return [];
+  }
+}
+
+/* ─── getDiffHunks ─────────────────────────────────────────────────────────── */
+
+/** Parse a unified diff string into DiffHunk[]. */
+function parseUnifiedDiff(diffOutput: string): DiffHunk[] {
+  if (!diffOutput.trim()) return [];
+
+  const lines = splitLines(diffOutput);
+  const hunks: DiffHunk[] = [];
+  let currentHunk: DiffHunk | null = null;
+  let oldLine = 0;
+  let newLine = 0;
+
+  for (const line of lines) {
+    // Hunk header: @@ -oldStart,oldCount +newStart,newCount @@
+    if (line.startsWith('@@')) {
+      const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+      if (match) {
+        oldLine = parseInt(match[1], 10);
+        newLine = parseInt(match[2], 10);
+        currentHunk = { header: line, lines: [] };
+        hunks.push(currentHunk);
+      }
+      continue;
+    }
+
+    if (!currentHunk) continue;
+
+    // Skip diff headers (---, +++, diff --git, index, etc.)
+    if (line.startsWith('diff ') || line.startsWith('index ') || line.startsWith('--- ') || line.startsWith('+++ ')) {
+      continue;
+    }
+
+    // No newline marker
+    if (line.startsWith('\\ No newline')) continue;
+
+    let diffLine: DiffLine;
+    if (line.startsWith('+')) {
+      diffLine = { type: 'added', content: line.slice(1), oldLineNumber: null, newLineNumber: newLine };
+      newLine++;
+    } else if (line.startsWith('-')) {
+      diffLine = { type: 'deleted', content: line.slice(1), oldLineNumber: oldLine, newLineNumber: null };
+      oldLine++;
+    } else {
+      // Context line (starts with ' ' or is empty for blank context lines)
+      const content = line.startsWith(' ') ? line.slice(1) : line;
+      diffLine = { type: 'context', content, oldLineNumber: oldLine, newLineNumber: newLine };
+      oldLine++;
+      newLine++;
+    }
+
+    currentHunk.lines.push(diffLine);
+  }
+
+  return hunks;
+}
+
+/**
+ * Get diff hunks for a specific file. Tries unstaged first, then staged.
+ */
+export async function getDiffHunks(
+  projectPath: string,
+  filePath: string,
+): Promise<DiffHunk[]> {
+  try {
+    // Try unstaged diff first
+    const unstaged = await execGit(projectPath, ['diff', '-U3', '--', filePath]);
+    if (unstaged.stdout.trim()) {
+      return parseUnifiedDiff(unstaged.stdout);
+    }
+
+    // Fall back to staged diff
+    const staged = await execGit(projectPath, ['diff', '--cached', '-U3', '--', filePath]);
+    if (staged.stdout.trim()) {
+      return parseUnifiedDiff(staged.stdout);
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/* ─── stageFile ────────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git add -- <filePath>` to stage a single file.
+ */
+export async function stageFile(
+  projectPath: string,
+  filePath: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['add', '--', normalizePath(filePath)]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || `Failed to stage file: ${filePath}`);
+  }
+}
+
+/* ─── unstageFile ──────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git reset HEAD -- <filePath>` to unstage a single file.
+ */
+export async function unstageFile(
+  projectPath: string,
+  filePath: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['reset', 'HEAD', '--', normalizePath(filePath)]);
+  // git reset HEAD exits with 1 when there is nothing to unstage but it still works;
+  // only throw on actual errors (exit 128+).
+  if (result.exitCode !== 0 && result.exitCode !== 1) {
+    throw new Error(result.stderr || `Failed to unstage file: ${filePath}`);
+  }
+}
+
+/* ─── stageAll ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git add -A` to stage all changes.
+ */
+export async function stageAll(projectPath: string): Promise<void> {
+  const result = await execGit(projectPath, ['add', '-A']);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to stage all files');
+  }
+}
+
+/* ─── commit ───────────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git commit -m <message>` and return the new commit hash.
+ * Throws if message is empty or the command fails.
+ */
+export async function commit(
+  projectPath: string,
+  message: string,
+): Promise<string> {
+  if (!message.trim()) {
+    throw new Error('Commit message must not be empty');
+  }
+
+  const result = await execGit(projectPath, ['commit', '-m', message]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Commit failed');
+  }
+
+  // Extract the commit hash from stdout, e.g.:
+  //   [main (root-commit) abc1234] message
+  const match = /\[.*?([0-9a-f]{7,40})\]/.exec(result.stdout);
+  if (match) return match[1];
+
+  // Fallback: ask git for the HEAD hash
+  const headResult = await execGit(projectPath, ['rev-parse', 'HEAD']);
+  return headResult.stdout.trim();
+}
+
+/* ─── getLog ───────────────────────────────────────────────────────────────── */
+
+function timeAgo(isoTimestamp: string): string {
+  const diff = Date.now() - new Date(isoTimestamp).getTime();
+  if (diff < 60_000) return 'just now';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return `${Math.floor(diff / 86_400_000)}d ago`;
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/**
+ * Parse git log with numstat into Commit[].
+ */
+export async function getLog(
+  projectPath: string,
+  count = 50,
+): Promise<Commit[]> {
+  try {
+    // Use a delimiter unlikely to appear in commit messages
+    const SEP = '---nexus-commit-sep---';
+    const result = await execGit(projectPath, [
+      'log',
+      `--format=${SEP}%n%H|%s|%an|%ae|%aI`,
+      '--numstat',
+      `-n${count}`,
+    ]);
+
+    if (result.exitCode !== 0 || !result.stdout.trim()) return [];
+
+    const commits: Commit[] = [];
+    const blocks = result.stdout.split(SEP).filter((b) => b.trim());
+
+    for (const block of blocks) {
+      const blockLines = splitLines(block).filter((l) => l.trim());
+      if (blockLines.length === 0) continue;
+
+      // First line is the formatted commit info
+      const infoLine = blockLines[0];
+      const pipeIdx1 = infoLine.indexOf('|');
+      if (pipeIdx1 === -1) continue;
+
+      const hash = infoLine.slice(0, pipeIdx1);
+      const rest = infoLine.slice(pipeIdx1 + 1);
+
+      const pipeIdx2 = rest.indexOf('|');
+      if (pipeIdx2 === -1) continue;
+      const message = rest.slice(0, pipeIdx2);
+      const rest2 = rest.slice(pipeIdx2 + 1);
+
+      const pipeIdx3 = rest2.indexOf('|');
+      if (pipeIdx3 === -1) continue;
+      const author = rest2.slice(0, pipeIdx3);
+      const rest3 = rest2.slice(pipeIdx3 + 1);
+
+      const pipeIdx4 = rest3.indexOf('|');
+      if (pipeIdx4 === -1) continue;
+      // _email not used but parsed for correct field alignment
+      const _email = rest3.slice(0, pipeIdx4);
+      const timestamp = rest3.slice(pipeIdx4 + 1);
+
+      // Parse numstat lines for additions/deletions
+      let additions = 0;
+      let deletions = 0;
+      for (let i = 1; i < blockLines.length; i++) {
+        const parts = blockLines[i].split('\t');
+        if (parts.length >= 3) {
+          const add = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
+          const del = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+          if (!isNaN(add)) additions += add;
+          if (!isNaN(del)) deletions += del;
+        }
+      }
+
+      // Heuristic for AI-generated commits
+      const isAIGenerated =
+        /\bco-authored-by:.*\b(copilot|claude|gpt|ai|bot)\b/i.test(message) ||
+        /\b(ai|generated|auto-generated)\b/i.test(message);
+
+      commits.push({
+        hash,
+        message,
+        author,
+        authorInitials: initials(author),
+        timestamp,
+        timeAgo: timeAgo(timestamp),
+        additions,
+        deletions,
+        isAIGenerated,
+      });
+    }
+
+    return commits;
+  } catch {
+    return [];
+  }
+}

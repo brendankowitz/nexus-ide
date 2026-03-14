@@ -1,0 +1,38 @@
+{
+  "name": "nexus-ide",
+  "version": "0.1.0",
+  "description": "Developer Mission Control — project orchestration for AI-assisted workflows",
+  "main": "dist-electron/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev --config electron-vite.config.ts",
+    "build": "electron-vite build --config electron-vite.config.ts",
+    "preview": "electron-vite preview --config electron-vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "^1.2.0-beta.3",
+    "@parcel/watcher": "^2.5.6",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "dugite": "^3.2.1",
+    "electron-store": "^10.0.0",
+    "immer": "^11.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "electron-vite": "^2.3.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0"
+  }
+}

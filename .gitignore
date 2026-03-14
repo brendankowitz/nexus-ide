@@ -416,3 +416,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Nexus IDE
+node_modules/
+dist/
+dist-electron/
+out/
+.vite/
