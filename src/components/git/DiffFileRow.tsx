@@ -114,10 +114,12 @@ export const DiffFileRow = ({
 
   return (
     <div className="border-b border-border-subtle">
-      {/* File row */}
+      {/* File row -- sticky when expanded so it stays visible while scrolling hunks */}
       <div
         onClick={() => toggleDiffFile(file.filePath)}
-        className="flex cursor-pointer items-center gap-2.5 px-5 py-[7px] font-mono text-[12px] transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover"
+        className={`flex cursor-pointer items-center gap-2.5 px-5 py-[7px] font-mono text-[12px] transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover ${
+          isExpanded ? 'sticky top-0 z-[5] border-b border-border-subtle bg-bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.3)]' : ''
+        }`}
       >
         {/* Expand icon */}
         <span
