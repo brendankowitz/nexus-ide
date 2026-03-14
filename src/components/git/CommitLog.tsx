@@ -3,6 +3,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useToastStore } from '@/stores/toastStore';
 import type { Commit } from '@/types';
 import { GitGraph, RefBadges } from './GitGraph';
+import { CommitDetailPanel } from './CommitDetailPanel';
 
 // ── Empty State ──────────────────────────────────
 
@@ -66,6 +67,7 @@ export const CommitLog = (): React.JSX.Element => {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCommit, setSelectedCommit] = useState<Commit | null>(null);
 
   const loadCommits = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
@@ -103,24 +105,43 @@ export const CommitLog = (): React.JSX.Element => {
   }
 
   return (
-    <div className="py-2">
-      <div className="flex">
-        {/* Graph column */}
-        <GitGraph commits={commits} />
-        {/* Commit details column */}
-        <div className="min-w-0 flex-1">
-          {commits.map((commit) => (
-            <CommitEntry key={commit.hash} commit={commit} />
-          ))}
+    <>
+      <div className="py-2">
+        <div className="flex">
+          {/* Graph column */}
+          <GitGraph commits={commits} />
+          {/* Commit details column */}
+          <div className="min-w-0 flex-1">
+            {commits.map((commit) => (
+              <CommitEntry
+                key={commit.hash}
+                commit={commit}
+                onDoubleClick={setSelectedCommit}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {selectedCommit !== null && activeProjectId !== null && (
+        <CommitDetailPanel
+          commit={selectedCommit}
+          activeProjectId={activeProjectId}
+          onClose={() => { setSelectedCommit(null); }}
+        />
+      )}
+    </>
   );
 };
 
 // ── CommitEntry ───────────────────────────────────
 
-const CommitEntry = ({ commit }: { commit: Commit }): React.JSX.Element => {
+interface CommitEntryProps {
+  commit: Commit;
+  onDoubleClick: (commit: Commit) => void;
+}
+
+const CommitEntry = ({ commit, onDoubleClick }: CommitEntryProps): React.JSX.Element => {
   const [copied, setCopied] = useState(false);
 
   const handleHashClick = useCallback((e: React.MouseEvent): void => {
@@ -136,7 +157,11 @@ const CommitEntry = ({ commit }: { commit: Commit }): React.JSX.Element => {
     : 'bg-bg-active text-text-secondary';
 
   return (
-    <div className="flex cursor-pointer items-center gap-2.5 px-3 transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover" style={{ height: 44 }}>
+    <div
+      className="flex cursor-pointer items-center gap-2.5 px-3 transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover"
+      style={{ height: 44 }}
+      onDoubleClick={() => { onDoubleClick(commit); }}
+    >
       {/* Avatar */}
       <div
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-semibold ${avatarStyle}`}

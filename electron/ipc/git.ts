@@ -591,6 +591,98 @@ export async function commit(
   return headResult.stdout.trim();
 }
 
+/* ─── getCommitDiff ────────────────────────────────────────────────────────── */
+
+/**
+ * Return the list of files changed in a specific commit as DiffFile[].
+ * Uses `git diff-tree --no-commit-id -r --numstat` for stats and
+ * `git diff-tree --no-commit-id -r --name-status` for status codes.
+ */
+export async function getCommitDiff(
+  projectPath: string,
+  commitHash: string,
+): Promise<DiffFile[]> {
+  try {
+    const [numstatResult, nameStatusResult] = await Promise.all([
+      execGit(projectPath, ['diff-tree', '--no-commit-id', '-r', '--numstat', commitHash]),
+      execGit(projectPath, ['diff-tree', '--no-commit-id', '-r', '--name-status', commitHash]),
+    ]);
+
+    if (numstatResult.exitCode !== 0) return [];
+
+    // Build status map from name-status output
+    // Format: <status>\t<path>  or  R<score>\t<old>\t<new>
+    const statusMap = new Map<string, { status: 'M' | 'A' | 'D' | 'R'; oldPath?: string }>();
+    for (const line of splitLines(nameStatusResult.stdout)) {
+      if (!line.trim()) continue;
+      const parts = line.split('\t');
+      if (parts.length < 2) continue;
+      const code = parts[0]?.trim() ?? '';
+      if (code.startsWith('R') && parts.length >= 3) {
+        const newPath = parts[2]?.trim() ?? '';
+        const oldPath = parts[1]?.trim() ?? '';
+        statusMap.set(newPath, { status: 'R', oldPath });
+      } else {
+        const filePath = parts[1]?.trim() ?? '';
+        statusMap.set(filePath, { status: mapStatus(code) });
+      }
+    }
+
+    const files: DiffFile[] = [];
+
+    // Parse numstat: <added>\t<deleted>\t<path>
+    for (const line of splitLines(numstatResult.stdout)) {
+      if (!line.trim()) continue;
+      const parts = line.split('\t');
+      if (parts.length < 3) continue;
+      const additions = parts[0] === '-' ? 0 : parseInt(parts[0] ?? '0', 10);
+      const deletions = parts[1] === '-' ? 0 : parseInt(parts[1] ?? '0', 10);
+      const filePath = parts.slice(2).join('\t');
+
+      const statusEntry = statusMap.get(filePath);
+      files.push({
+        filePath,
+        status: statusEntry?.status ?? 'M',
+        additions,
+        deletions,
+        hunks: [],
+        ...(statusEntry?.oldPath !== undefined ? { oldPath: statusEntry.oldPath } : {}),
+      });
+    }
+
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+/* ─── getCommitFileHunks ───────────────────────────────────────────────────── */
+
+/**
+ * Return the diff hunks for a single file within a specific commit.
+ * Uses `git show --format= -U3 <hash> -- <file>`.
+ */
+export async function getCommitFileHunks(
+  projectPath: string,
+  commitHash: string,
+  filePath: string,
+): Promise<DiffHunk[]> {
+  try {
+    const result = await execGit(projectPath, [
+      'show',
+      '--format=',
+      '-U3',
+      commitHash,
+      '--',
+      normalizePath(filePath),
+    ]);
+    if (result.exitCode !== 0 || !result.stdout.trim()) return [];
+    return parseUnifiedDiff(result.stdout);
+  } catch {
+    return [];
+  }
+}
+
 /* ─── getLog ───────────────────────────────────────────────────────────────── */
 
 function timeAgo(isoTimestamp: string): string {

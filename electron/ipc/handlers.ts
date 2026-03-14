@@ -49,6 +49,8 @@ import {
   checkout,
   getDiff,
   getDiffHunks,
+  getCommitDiff,
+  getCommitFileHunks,
   getLog,
   stageFile,
   unstageFile,
@@ -123,6 +125,8 @@ export const IPC_CHANNELS = {
   GIT_CHECKOUT: 'git:checkout',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
+  GIT_COMMIT_DIFF: 'git:commit-diff',
+  GIT_COMMIT_FILE_HUNKS: 'git:commit-file-hunks',
   GIT_LOG: 'git:log',
   GIT_STAGE: 'git:stage',
   GIT_UNSTAGE: 'git:unstage',
@@ -419,6 +423,39 @@ export function registerIpcHandlers(): void {
         return await getDiffHunks(projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_DIFF_HUNKS_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_COMMIT_DIFF,
+    async (
+      _event,
+      projectId: string,
+      commitHash: string,
+    ): Promise<DiffFile[]> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        return await getCommitDiff(projectPath, commitHash);
+      } catch (err) {
+        throwIpcError('GIT_COMMIT_DIFF_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_COMMIT_FILE_HUNKS,
+    async (
+      _event,
+      projectId: string,
+      commitHash: string,
+      filePath: string,
+    ): Promise<DiffHunk[]> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        return await getCommitFileHunks(projectPath, commitHash, filePath);
+      } catch (err) {
+        throwIpcError('GIT_COMMIT_FILE_HUNKS_FAILED', err);
       }
     },
   );

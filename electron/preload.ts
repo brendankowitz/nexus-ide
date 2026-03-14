@@ -57,6 +57,8 @@ const CH = {
   GIT_CHECKOUT: 'git:checkout',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
+  GIT_COMMIT_DIFF: 'git:commit-diff',
+  GIT_COMMIT_FILE_HUNKS: 'git:commit-file-hunks',
   GIT_LOG: 'git:log',
   GIT_STAGE: 'git:stage',
   GIT_UNSTAGE: 'git:unstage',
@@ -154,6 +156,12 @@ const nexusAPIImpl = {
     },
     diffHunks(projectId: string, filePath: string): Promise<DiffHunk[]> {
       return ipcRenderer.invoke(CH.GIT_DIFF_HUNKS, projectId, filePath) as Promise<DiffHunk[]>;
+    },
+    commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]> {
+      return ipcRenderer.invoke(CH.GIT_COMMIT_DIFF, projectId, commitHash) as Promise<DiffFile[]>;
+    },
+    commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]> {
+      return ipcRenderer.invoke(CH.GIT_COMMIT_FILE_HUNKS, projectId, commitHash, filePath) as Promise<DiffHunk[]>;
     },
     log(projectId: string, count?: number): Promise<Commit[]> {
       return ipcRenderer.invoke(CH.GIT_LOG, projectId, count) as Promise<Commit[]>;
