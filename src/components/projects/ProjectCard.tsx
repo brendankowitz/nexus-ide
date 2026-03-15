@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
-import type { Project, GitStatus, Phase } from '@/types';
+import type { Project, GitStatus, Phase, ProjectGroup } from '@/types';
 import { Badge } from '@/components/shared/Badge';
 import { StatusDot } from '@/components/shared/StatusDot';
 
@@ -12,6 +12,9 @@ interface ProjectCardProps {
   agentCount?: number;
   activePhase?: Phase;
   onClick: () => void;
+  groupId?: string;
+  groups?: ProjectGroup[];
+  onMoveToGroup?: (groupId: string | null) => void;
 }
 
 export const ProjectCard = ({
@@ -22,6 +25,9 @@ export const ProjectCard = ({
   agentCount,
   activePhase,
   onClick,
+  groupId,
+  groups,
+  onMoveToGroup,
 }: ProjectCardProps): React.JSX.Element => {
   const removeProject = useProjectStore((s) => s.removeProject);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
@@ -32,11 +38,15 @@ export const ProjectCard = ({
   const displayBranch = branchName.length > 16 ? branchName.slice(0, 16) : branchName;
 
   const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showMoveToGroup, setShowMoveToGroup] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const availableGroups = groups ?? [];
+  const hasGroups = availableGroups.length > 0;
 
   async function handleOpenInEditor(): Promise<void> {
     try {
-      const sessionId = await window.nexusAPI.terminal.create({
+      await window.nexusAPI.terminal.create({
         projectId: project.id,
         command: 'code',
         args: [project.path],
@@ -50,7 +60,7 @@ export const ProjectCard = ({
 
   async function handleOpenTerminal(): Promise<void> {
     try {
-      const sessionId = await window.nexusAPI.terminal.create({
+      await window.nexusAPI.terminal.create({
         projectId: project.id,
         cwd: project.path,
         label: `Terminal - ${project.name}`,
@@ -83,6 +93,13 @@ export const ProjectCard = ({
   function handleContextMenu(e: React.MouseEvent<HTMLDivElement>): void {
     e.preventDefault();
     setShowContextMenu(!showContextMenu);
+    setShowMoveToGroup(false);
+  }
+
+  function handleMoveToGroup(targetGroupId: string | null): void {
+    onMoveToGroup?.(targetGroupId);
+    setShowContextMenu(false);
+    setShowMoveToGroup(false);
   }
 
   return (
@@ -129,6 +146,7 @@ export const ProjectCard = ({
         <div
           ref={menuRef}
           className="absolute bottom-full left-0 mb-1 w-48 rounded-[var(--radius-md)] border border-border-strong bg-bg-surface shadow-lg z-[1001]"
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={(e) => {
@@ -153,10 +171,56 @@ export const ProjectCard = ({
               e.stopPropagation();
               void handleRevealInExplorer();
             }}
-            className="block w-full text-left px-3 py-2 font-mono text-[11px] text-text-secondary hover:bg-bg-hover transition-colors border-b border-border-subtle"
+            className={`block w-full text-left px-3 py-2 font-mono text-[11px] text-text-secondary hover:bg-bg-hover transition-colors ${hasGroups ? 'border-b border-border-subtle' : 'border-b border-border-subtle'}`}
           >
             Reveal in Explorer
           </button>
+
+          {/* Move to group section */}
+          {hasGroups && (
+            <div className="border-b border-border-subtle">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoveToGroup((v) => !v);
+                }}
+                className="flex w-full items-center justify-between text-left px-3 py-2 font-mono text-[11px] text-text-secondary hover:bg-bg-hover transition-colors"
+              >
+                <span>Move to group</span>
+                <span className="text-text-ghost">{showMoveToGroup ? '▾' : '▸'}</span>
+              </button>
+              {showMoveToGroup && (
+                <div className="pb-1">
+                  {availableGroups.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveToGroup(g.id);
+                      }}
+                      className={`block w-full text-left pl-5 pr-3 py-1.5 font-mono text-[10px] hover:bg-bg-hover transition-colors ${
+                        g.id === groupId ? 'text-text-primary' : 'text-text-tertiary'
+                      }`}
+                    >
+                      {g.id === groupId ? '• ' : ''}{g.name}
+                    </button>
+                  ))}
+                  {groupId !== undefined && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveToGroup(null);
+                      }}
+                      className="block w-full text-left pl-5 pr-3 py-1.5 font-mono text-[10px] text-text-ghost hover:bg-bg-hover transition-colors"
+                    >
+                      (ungrouped)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();

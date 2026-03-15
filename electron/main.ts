@@ -4,6 +4,12 @@ import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc/handlers.js';
 import { detectDefaultShell } from './ipc/terminal.js';
 
+/* ─── Remote debugging (dev only) ─── */
+
+if (process.env.ELECTRON_RENDERER_URL) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9222');
+}
+
 /* ─── Single instance lock ─── */
 
 const gotLock = app.requestSingleInstanceLock();

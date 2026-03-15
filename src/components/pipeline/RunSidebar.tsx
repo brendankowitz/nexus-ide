@@ -61,8 +61,15 @@ const RunCard = ({
         active ? 'bg-bg-surface' : 'hover:bg-bg-hover'
       }`}
     >
-      <div className="mb-1 font-mono text-[12px] font-medium text-text-primary">
-        {run.config.name}
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="font-mono text-[12px] font-medium text-text-primary">
+          {run.config.name}
+        </span>
+        {(run.config.additionalProjectIds?.length ?? 0) > 0 && (
+          <span className="rounded-[3px] bg-[var(--phase-validate-dim)] px-1 py-px font-mono text-[9px] font-medium text-phase-validate">
+            +{run.config.additionalProjectIds!.length} projects
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1.5 font-mono text-[10px] text-text-tertiary">
         <span

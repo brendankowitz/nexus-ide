@@ -8,6 +8,8 @@ interface DiffGroupsViewProps {
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
+  selectedFiles?: Set<string>;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 export const DiffGroupsView = ({
@@ -15,6 +17,8 @@ export const DiffGroupsView = ({
   activeProjectId,
   onRefresh,
   onOpenFullDiff,
+  selectedFiles,
+  onToggleSelect,
 }: DiffGroupsViewProps): React.JSX.Element => {
   const groups = useMemo(() => groupFilesByFeature(files), [files]);
 
@@ -27,6 +31,8 @@ export const DiffGroupsView = ({
           activeProjectId={activeProjectId}
           onRefresh={onRefresh}
           onOpenFullDiff={onOpenFullDiff}
+          selectedFiles={selectedFiles}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>
@@ -38,6 +44,8 @@ interface GroupSectionProps {
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
+  selectedFiles?: Set<string>;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 const GroupSection = ({
@@ -45,6 +53,8 @@ const GroupSection = ({
   activeProjectId,
   onRefresh,
   onOpenFullDiff,
+  selectedFiles,
+  onToggleSelect,
 }: GroupSectionProps): React.JSX.Element => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -114,6 +124,8 @@ const GroupSection = ({
               onRefresh={onRefresh}
               onOpenFullDiff={onOpenFullDiff}
               layout="default"
+              selected={selectedFiles?.has(file.filePath)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>

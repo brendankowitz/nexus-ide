@@ -10,6 +10,8 @@ export interface DiffFileRowProps {
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
   /** 'default' = current style, 'table' = list details columns, 'compact' = tree mode minimal */
   layout?: 'default' | 'table' | 'compact';
+  selected?: boolean;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -25,10 +27,17 @@ export const DiffFileRow = ({
   onRefresh,
   onOpenFullDiff,
   layout = 'default',
+  selected,
+  onToggleSelect,
 }: DiffFileRowProps): React.JSX.Element => {
   const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
   const toggleDiffFile = useUIStore((s) => s.toggleDiffFile);
+  const reviewFile = useUIStore((s) => s.reviewFile);
+  const unreviewFile = useUIStore((s) => s.unreviewFile);
   const isExpanded = !!expandedFiles[file.filePath];
+
+  const signature = `${file.additions}-${file.deletions}`;
+  const isReviewed = useUIStore((s) => s.isReviewedAndUnchanged(file.filePath, signature));
 
   const [hunks, setHunks] = useState<DiffHunkType[]>(file.hunks);
   const [loadingHunks, setLoadingHunks] = useState(false);
@@ -112,8 +121,28 @@ export const DiffFileRow = ({
     [activeProjectId, file, hunks, onOpenFullDiff],
   );
 
+  const handleReviewToggle = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      if (isReviewed) {
+        unreviewFile(file.filePath);
+      } else {
+        reviewFile(file.filePath, signature);
+      }
+    },
+    [isReviewed, file.filePath, signature, reviewFile, unreviewFile],
+  );
+
+  const handleSelectToggle = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      onToggleSelect?.(file.filePath);
+    },
+    [file.filePath, onToggleSelect],
+  );
+
   return (
-    <div className="border-b border-border-subtle">
+    <div className={`border-b border-border-subtle${isReviewed ? ' opacity-50 grayscale' : ''}`}>
       {/* File row -- sticky when expanded so it stays visible while scrolling hunks */}
       <div
         onClick={() => toggleDiffFile(file.filePath)}
@@ -121,6 +150,21 @@ export const DiffFileRow = ({
           isExpanded ? 'sticky top-0 z-[5] border-b border-border-subtle bg-bg-raised shadow-[0_1px_3px_rgba(0,0,0,0.3)]' : ''
         }`}
       >
+        {/* Selection checkbox */}
+        {onToggleSelect !== undefined && (
+          <button
+            title={selected ? 'Deselect file' : 'Select file'}
+            onClick={handleSelectToggle}
+            className={`flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[2px] border text-[8px] transition-all duration-[var(--duration-fast)] ${
+              selected
+                ? 'border-phase-execute bg-phase-execute text-bg-void'
+                : 'border-border-default bg-transparent text-transparent hover:border-border-strong'
+            }`}
+          >
+            {selected ? '\u2713' : ''}
+          </button>
+        )}
+
         {/* Expand icon */}
         <span
           className={`w-3 shrink-0 text-center text-[10px] text-text-ghost transition-transform duration-[var(--duration-fast)] ${
@@ -246,6 +290,19 @@ export const DiffFileRow = ({
           onStage={handleStage}
           onUnstage={handleUnstage}
         />
+
+        {/* Review toggle */}
+        <button
+          title={isReviewed ? 'Mark as unreviewed' : 'Mark as reviewed'}
+          onClick={handleReviewToggle}
+          className={`ml-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
+            isReviewed
+              ? 'border-[var(--color-clean)] bg-[var(--color-clean)] text-[var(--bg-void)]'
+              : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
+          }`}
+        >
+          {isReviewed ? '\u2713' : '\u25cb'}
+        </button>
       </div>
 
       {/* Hunks */}

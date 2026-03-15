@@ -7,6 +7,8 @@ interface DiffListViewProps {
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
+  selectedFiles?: Set<string>;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 const COLUMN_HEADERS: { key: SortColumn; label: string; className: string }[] = [
@@ -31,6 +33,8 @@ export const DiffListView = ({
   activeProjectId,
   onRefresh,
   onOpenFullDiff,
+  selectedFiles,
+  onToggleSelect,
 }: DiffListViewProps): React.JSX.Element => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -73,8 +77,8 @@ export const DiffListView = ({
     <div>
       {/* Column headers */}
       <div className="flex items-center gap-2.5 border-b border-border-default px-5 py-1.5">
-        {/* Spacer for expand + status icons */}
-        <div className="w-[42px] shrink-0" />
+        {/* Spacer for select + expand + status icons */}
+        <div className={`${onToggleSelect !== undefined ? 'w-[56px]' : 'w-[42px]'} shrink-0`} />
         {COLUMN_HEADERS.map((col) => (
           <button
             key={col.key}
@@ -102,6 +106,8 @@ export const DiffListView = ({
           onRefresh={onRefresh}
           onOpenFullDiff={onOpenFullDiff}
           layout="table"
+          selected={selectedFiles?.has(file.filePath)}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>

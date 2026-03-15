@@ -17,6 +17,7 @@ interface UIState {
   commandPaletteOpen: boolean;
   addProjectModalOpen: boolean;
   expandedDiffFiles: Record<string, boolean>;
+  reviewedFiles: Record<string, { checkedAt: number; signature: string }>;
   lastKeyPressed: string | null;
   terminalTabs: TerminalTabEntry[];
 }
@@ -34,6 +35,10 @@ interface UIActions {
   setLastKeyPressed: (key: string | null) => void;
   addTerminalTab: (sessionId: string, label: string) => void;
   removeTerminalTab: (id: string) => void;
+  reviewFile: (filePath: string, signature: string) => void;
+  unreviewFile: (filePath: string) => void;
+  isReviewedAndUnchanged: (filePath: string, signature: string) => boolean;
+  purgeStaleReviews: (currentFiles: Array<{ filePath: string; signature: string }>) => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -44,6 +49,7 @@ const initialState = {
   commandPaletteOpen: false,
   addProjectModalOpen: false,
   expandedDiffFiles: {} as Record<string, boolean>,
+  reviewedFiles: {} as Record<string, { checkedAt: number; signature: string }>,
   lastKeyPressed: null,
   terminalTabs: [],
 } satisfies UIState;
@@ -122,6 +128,33 @@ export const useUIStore = create<UIStore>()(
           state.activeTab = remaining.length > 0
             ? (remaining[remaining.length - 1].id as MainTab)
             : 'branches';
+        }
+      }),
+
+    reviewFile: (filePath, signature) =>
+      set((state) => {
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature };
+        delete state.expandedDiffFiles[filePath];
+      }),
+
+    unreviewFile: (filePath) =>
+      set((state) => {
+        delete state.reviewedFiles[filePath];
+      }),
+
+    isReviewedAndUnchanged: (filePath, signature) => {
+      const entry = get().reviewedFiles[filePath];
+      return !!entry && entry.signature === signature;
+    },
+
+    purgeStaleReviews: (currentFiles) =>
+      set((state) => {
+        const fileMap = new Map(currentFiles.map((f) => [f.filePath, f.signature]));
+        for (const fp of Object.keys(state.reviewedFiles)) {
+          const currentSig = fileMap.get(fp);
+          if (currentSig === undefined || currentSig !== state.reviewedFiles[fp].signature) {
+            delete state.reviewedFiles[fp];
+          }
         }
       }),
   }))

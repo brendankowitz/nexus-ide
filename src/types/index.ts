@@ -22,6 +22,13 @@ export interface Project {
   addedAt: string;
 }
 
+export interface ProjectGroup {
+  id: string;
+  name: string;
+  projectIds: string[];
+  collapsed: boolean;
+}
+
 // ── Git ──────────────────────────────────────────
 
 export interface Branch {
@@ -114,6 +121,7 @@ export interface Commit {
 export interface PipelineConfig {
   name: string;
   projectId: string;
+  additionalProjectIds?: string[];
   branch: string;
   worktreePath?: string;
   plan: { pluginId: string; config?: Record<string, unknown> };

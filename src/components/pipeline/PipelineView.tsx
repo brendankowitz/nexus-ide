@@ -277,9 +277,11 @@ interface NewRunFormProps {
 }
 
 const NewRunForm = ({ onSubmit, onCancel, projectId }: NewRunFormProps): React.JSX.Element => {
+  const allProjects = useProjectStore((s) => s.projects);
   const [name, setName] = useState('');
   const [branch, setBranch] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [additionalProjectIds, setAdditionalProjectIds] = useState<string[]>([]);
 
   // Plugin lists
   const [planPlugins, setPlanPlugins] = useState<NexusPlugin[]>([]);
@@ -327,6 +329,7 @@ const NewRunForm = ({ onSubmit, onCancel, projectId }: NewRunFormProps): React.J
     name: name.trim(),
     projectId,
     branch: branch.trim(),
+    ...(additionalProjectIds.length > 0 ? { additionalProjectIds } : {}),
     plan: { pluginId: planPluginId, config: Object.keys(planConfig).length > 0 ? planConfig : undefined },
     execute: { pluginId: executePluginId, config: Object.keys(executeConfig).length > 0 ? executeConfig : undefined },
     validate: {
@@ -371,6 +374,40 @@ const NewRunForm = ({ onSubmit, onCancel, projectId }: NewRunFormProps): React.J
           className="flex-1 rounded-[var(--radius-sm)] border border-border-default bg-bg-void px-2 py-1.5 font-mono text-[11px] text-text-primary placeholder:text-text-ghost focus:border-border-strong focus:outline-none"
         />
       </div>
+
+      {/* Target Projects */}
+      {allProjects.length > 1 && (
+        <div className="mb-3 rounded-[var(--radius-md)] border border-border-default bg-bg-surface p-3">
+          <div className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-tertiary">
+            Target Projects
+          </div>
+          <div className="flex flex-col gap-1">
+            {allProjects.filter(p => p.id !== projectId).map(p => (
+              <label key={p.id} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={additionalProjectIds.includes(p.id)}
+                  onChange={(e) => {
+                    setAdditionalProjectIds(prev =>
+                      e.target.checked
+                        ? [...prev, p.id]
+                        : prev.filter(id => id !== p.id)
+                    );
+                  }}
+                  className="h-3 w-3 accent-[var(--phase-validate)]"
+                />
+                <span className="font-mono text-[11px] text-text-secondary">{p.name}</span>
+                <span className="truncate font-mono text-[10px] text-text-ghost">{p.path}</span>
+              </label>
+            ))}
+          </div>
+          {additionalProjectIds.length > 0 && (
+            <p className="mt-1.5 font-mono text-[10px] text-text-ghost">
+              Pipeline will run across {additionalProjectIds.length + 1} projects
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Plugin selections */}
       <div className="mb-3 flex flex-col gap-2">

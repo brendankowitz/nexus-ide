@@ -5,6 +5,7 @@ import type {
   Branch,
   Worktree,
   GitStatus,
+  ProjectGroup,
 } from '@/types';
 
 interface ProjectState {
@@ -13,6 +14,7 @@ interface ProjectState {
   gitStatus: Record<string, GitStatus>;
   branches: Record<string, Branch[]>;
   worktrees: Record<string, Worktree[]>;
+  groups: ProjectGroup[];
 }
 
 interface ProjectActions {
@@ -23,6 +25,12 @@ interface ProjectActions {
   updateGitStatus: (projectId: string, status: GitStatus) => void;
   setBranches: (projectId: string, branches: Branch[]) => void;
   setWorktrees: (projectId: string, worktrees: Worktree[]) => void;
+  setGroups: (groups: ProjectGroup[]) => void;
+  addGroup: (name: string) => ProjectGroup;
+  removeGroup: (id: string) => void;
+  renameGroup: (id: string, name: string) => void;
+  toggleGroupCollapsed: (id: string) => void;
+  moveProjectToGroup: (projectId: string, groupId: string | null) => void;
 }
 
 type ProjectStore = ProjectState & ProjectActions;
@@ -33,10 +41,11 @@ const initialState = {
   gitStatus: {},
   branches: {},
   worktrees: {},
+  groups: [],
 } satisfies ProjectState;
 
 export const useProjectStore = create<ProjectStore>()(
-  immer((set) => ({
+  immer((set, get) => ({
     ...initialState,
 
     setProjects: (projects) =>
@@ -61,6 +70,10 @@ export const useProjectStore = create<ProjectStore>()(
         delete state.gitStatus[id];
         delete state.branches[id];
         delete state.worktrees[id];
+        // Remove project from all groups
+        for (const group of state.groups) {
+          group.projectIds = group.projectIds.filter((pid) => pid !== id);
+        }
       }),
 
     setActiveProject: (id) =>
@@ -81,6 +94,52 @@ export const useProjectStore = create<ProjectStore>()(
     setWorktrees: (projectId, worktrees) =>
       set((state: ProjectState) => {
         state.worktrees[projectId] = worktrees;
+      }),
+
+    setGroups: (groups) =>
+      set((state: ProjectState) => {
+        state.groups = groups;
+      }),
+
+    addGroup: (name) => {
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const newGroup: ProjectGroup = { id, name, projectIds: [], collapsed: false };
+      set((state: ProjectState) => {
+        state.groups.push(newGroup);
+      });
+      return get().groups.find((g) => g.id === id) ?? newGroup;
+    },
+
+    removeGroup: (id) =>
+      set((state: ProjectState) => {
+        state.groups = state.groups.filter((g) => g.id !== id);
+      }),
+
+    renameGroup: (id, name) =>
+      set((state: ProjectState) => {
+        const group = state.groups.find((g) => g.id === id);
+        if (group) group.name = name;
+      }),
+
+    toggleGroupCollapsed: (id) =>
+      set((state: ProjectState) => {
+        const group = state.groups.find((g) => g.id === id);
+        if (group) group.collapsed = !group.collapsed;
+      }),
+
+    moveProjectToGroup: (projectId, groupId) =>
+      set((state: ProjectState) => {
+        // Remove from all groups first
+        for (const group of state.groups) {
+          group.projectIds = group.projectIds.filter((pid) => pid !== projectId);
+        }
+        // Add to target group if specified
+        if (groupId !== null) {
+          const targetGroup = state.groups.find((g) => g.id === groupId);
+          if (targetGroup && !targetGroup.projectIds.includes(projectId)) {
+            targetGroup.projectIds.push(projectId);
+          }
+        }
       }),
   }))
 );

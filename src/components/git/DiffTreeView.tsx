@@ -8,6 +8,8 @@ interface DiffTreeViewProps {
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
+  selectedFiles?: Set<string>;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 export const DiffTreeView = ({
@@ -15,6 +17,8 @@ export const DiffTreeView = ({
   activeProjectId,
   onRefresh,
   onOpenFullDiff,
+  selectedFiles,
+  onToggleSelect,
 }: DiffTreeViewProps): React.JSX.Element => {
   const tree = useMemo(() => groupFilesByDirectory(files), [files]);
 
@@ -28,6 +32,8 @@ export const DiffTreeView = ({
           activeProjectId={activeProjectId}
           onRefresh={onRefresh}
           onOpenFullDiff={onOpenFullDiff}
+          selectedFiles={selectedFiles}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>
@@ -40,6 +46,8 @@ interface TreeNodeProps {
   activeProjectId: string | null;
   onRefresh: () => Promise<void>;
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
+  selectedFiles?: Set<string>;
+  onToggleSelect?: (filePath: string) => void;
 }
 
 const TreeNode = ({
@@ -48,6 +56,8 @@ const TreeNode = ({
   activeProjectId,
   onRefresh,
   onOpenFullDiff,
+  selectedFiles,
+  onToggleSelect,
 }: TreeNodeProps): React.JSX.Element => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -60,6 +70,8 @@ const TreeNode = ({
           onRefresh={onRefresh}
           onOpenFullDiff={onOpenFullDiff}
           layout="compact"
+          selected={selectedFiles?.has(node.file.filePath)}
+          onToggleSelect={onToggleSelect}
         />
       </div>
     );
@@ -126,6 +138,8 @@ const TreeNode = ({
               activeProjectId={activeProjectId}
               onRefresh={onRefresh}
               onOpenFullDiff={onOpenFullDiff}
+              selectedFiles={selectedFiles}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>

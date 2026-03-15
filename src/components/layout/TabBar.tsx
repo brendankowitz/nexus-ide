@@ -40,17 +40,26 @@ const TerminalIcon = (): React.JSX.Element => (
   </svg>
 );
 
+const GroupLabel = ({ label }: { label: string }): React.JSX.Element => (
+  <span className="self-center px-2 font-mono text-[9px] font-semibold uppercase tracking-[2px] text-text-ghost select-none">
+    {label}
+  </span>
+);
+
 interface StaticTabDef {
   id: MainTab;
   label: string;
 }
 
-const staticTabs: StaticTabDef[] = [
-  { id: 'pipeline', label: 'pipeline' },
+const scTabs: StaticTabDef[] = [
   { id: 'branches', label: 'branches' },
   { id: 'worktrees', label: 'worktrees' },
   { id: 'diffs', label: 'diffs' },
   { id: 'log', label: 'log' },
+];
+
+const devStaticTabs: StaticTabDef[] = [
+  { id: 'pipeline', label: 'pipeline' },
 ];
 
 export const TabBar = (): React.JSX.Element => {
@@ -98,9 +107,11 @@ export const TabBar = (): React.JSX.Element => {
 
   return (
     <div className="flex h-[var(--tab-height)] items-stretch gap-0 border-b border-border-subtle bg-bg-void px-0.5">
-      {/* Static navigation tabs */}
+
+      {/* SC group */}
       <div className="flex items-stretch">
-        {staticTabs.map((tab) => {
+        <GroupLabel label="SC" />
+        {scTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -127,50 +138,75 @@ export const TabBar = (): React.JSX.Element => {
         })}
       </div>
 
-      {/* Terminal tabs -- after static tabs, before spacer */}
-      {terminalTabs.length > 0 && (
-        <div className="flex items-stretch border-l border-border-subtle ml-0.5 pl-0.5">
-          {terminalTabs.map((tt) => {
-            const isActive = activeTab === tt.id;
-            return (
-              <button
-                key={tt.id}
-                onClick={() => setActiveTab(tt.id as MainTab)}
-                className={`group relative flex items-center gap-1 whitespace-nowrap border-none bg-transparent px-3 font-mono text-[11px] transition-colors duration-[var(--duration-fast)] cursor-pointer ${
-                  isActive
-                    ? 'font-medium text-text-primary'
-                    : 'font-normal text-text-quaternary hover:text-text-secondary'
-                }`}
-              >
-                <TerminalIcon />
-                <span className="opacity-80">{tt.label}</span>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTerminalTab(tt.id);
-                  }}
-                  className="ml-1 flex h-[14px] w-[14px] items-center justify-center rounded-sm text-[10px] opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100 hover:bg-bg-active"
-                >
-                  x
-                </span>
-                {isActive && (
-                  <div className="absolute bottom-0 left-3 right-3 h-px bg-text-primary" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Group divider */}
+      <div className="my-1.5 w-px bg-border-subtle" />
 
-      {/* New terminal tab button */}
-      <button
-        onClick={() => { void handleNewTerminalTab(); }}
-        title="New terminal tab (Ctrl+T)"
-        className="flex items-center justify-center px-2 border-none bg-transparent text-text-ghost transition-colors duration-[var(--duration-fast)] cursor-pointer hover:text-text-secondary"
-      >
-        <TerminalIcon />
-        <span className="ml-0.5 text-[10px]">+</span>
-      </button>
+      {/* DEV group */}
+      <div className="flex items-stretch">
+        <GroupLabel label="DEV" />
+
+        {/* pipeline static tab */}
+        {devStaticTabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex items-center gap-1.5 whitespace-nowrap border-none bg-transparent px-3.5 font-mono text-[11px] transition-colors duration-[var(--duration-fast)] cursor-pointer ${
+                isActive
+                  ? 'font-medium text-text-primary'
+                  : 'font-normal text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {tab.label}
+              {isActive && (
+                <div className="absolute bottom-0 left-3.5 right-3.5 h-px bg-text-primary" />
+              )}
+            </button>
+          );
+        })}
+
+        {/* Terminal tabs */}
+        {terminalTabs.map((tt) => {
+          const isActive = activeTab === tt.id;
+          return (
+            <button
+              key={tt.id}
+              onClick={() => setActiveTab(tt.id as MainTab)}
+              className={`group relative flex items-center gap-1 whitespace-nowrap border-none bg-transparent px-3 font-mono text-[11px] transition-colors duration-[var(--duration-fast)] cursor-pointer ${
+                isActive
+                  ? 'font-medium text-text-primary'
+                  : 'font-normal text-text-quaternary hover:text-text-secondary'
+              }`}
+            >
+              <TerminalIcon />
+              <span className="opacity-80">{tt.label}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTerminalTab(tt.id);
+                }}
+                className="ml-1 flex h-[14px] w-[14px] items-center justify-center rounded-sm text-[10px] opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100 hover:bg-bg-active"
+              >
+                x
+              </span>
+              {isActive && (
+                <div className="absolute bottom-0 left-3 right-3 h-px bg-text-primary" />
+              )}
+            </button>
+          );
+        })}
+
+        {/* New terminal tab button */}
+        <button
+          onClick={() => { void handleNewTerminalTab(); }}
+          title="New terminal tab (Ctrl+T)"
+          className="flex items-center justify-center px-2 border-none bg-transparent text-text-ghost transition-colors duration-[var(--duration-fast)] cursor-pointer hover:text-text-secondary"
+        >
+          <TerminalIcon />
+          <span className="ml-0.5 text-[10px]">+</span>
+        </button>
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />

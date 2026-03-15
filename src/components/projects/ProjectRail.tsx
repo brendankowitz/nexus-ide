@@ -1,8 +1,131 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { AddProjectModal } from '@/components/projects/AddProjectModal';
+import type { ProjectGroup } from '@/types';
+
+// ── GroupHeader ────────────────────────────────────────────────────────────
+
+interface GroupHeaderProps {
+  group: ProjectGroup;
+  autoRename?: boolean;
+  onToggle: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}
+
+const GroupHeader = ({ group, autoRename, onToggle, onRename, onDelete }: GroupHeaderProps): React.JSX.Element => {
+  const [showMenu, setShowMenu] = useState(false);
+  const [renaming, setRenaming] = useState(autoRename ?? false);
+  const [renameValue, setRenameValue] = useState(group.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Focus input when entering rename mode
+  useEffect(() => {
+    if (renaming && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [renaming]);
+
+  function commitRename(): void {
+    const trimmed = renameValue.trim();
+    if (trimmed.length > 0 && trimmed !== group.name) {
+      onRename(trimmed);
+    } else {
+      setRenameValue(group.name);
+    }
+    setRenaming(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
+    if (e.key === 'Enter') commitRename();
+    if (e.key === 'Escape') {
+      setRenameValue(group.name);
+      setRenaming(false);
+    }
+  }
+
+  return (
+    <div className="group/header flex items-center gap-1 px-2 py-1 mt-1">
+      {/* Chevron + name toggle */}
+      <button
+        onClick={onToggle}
+        className="flex flex-1 items-center gap-1 min-w-0 text-left"
+        title={group.collapsed ? 'Expand group' : 'Collapse group'}
+      >
+        <span
+          className={`inline-block text-[8px] text-text-ghost transition-transform duration-150 ${
+            group.collapsed ? '' : 'rotate-90'
+          }`}
+        >
+          ▶
+        </span>
+        {renaming ? (
+          <input
+            ref={inputRef}
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 min-w-0 bg-bg-void border border-border-strong rounded px-1 py-0.5 font-mono text-[10px] text-text-primary focus:outline-none focus:border-text-tertiary"
+          />
+        ) : (
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-text-ghost group-hover/header:text-text-tertiary transition-colors truncate">
+            {group.name}
+          </span>
+        )}
+      </button>
+
+      {/* Options button */}
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu((v) => !v);
+          }}
+          className="flex h-4 w-4 items-center justify-center rounded text-[11px] text-text-ghost opacity-0 group-hover/header:opacity-100 hover:text-text-tertiary hover:bg-bg-hover transition-all"
+          title="Group options"
+        >
+          ⋯
+        </button>
+        {showMenu && (
+          <div
+            ref={menuRef}
+            className="absolute right-0 top-full mt-0.5 w-32 rounded-[var(--radius-md)] border border-border-strong bg-bg-surface shadow-lg z-[1002]"
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                setRenameValue(group.name);
+                setRenaming(true);
+              }}
+              className="block w-full text-left px-3 py-2 font-mono text-[11px] text-text-secondary hover:bg-bg-hover transition-colors border-b border-border-subtle"
+            >
+              Rename
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onDelete();
+              }}
+              className="block w-full text-left px-3 py-2 font-mono text-[11px] text-[var(--color-deleted,#f87171)] hover:bg-bg-hover transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── ProjectRail ────────────────────────────────────────────────────────────
 
 export const ProjectRail = (): React.JSX.Element => {
   const projects = useProjectStore((s) => s.projects);
@@ -12,13 +135,24 @@ export const ProjectRail = (): React.JSX.Element => {
   const gitStatus = useProjectStore((s) => s.gitStatus);
   const worktrees = useProjectStore((s) => s.worktrees);
 
+  const groups = useProjectStore((s) => s.groups);
+  const setGroups = useProjectStore((s) => s.setGroups);
+  const addGroup = useProjectStore((s) => s.addGroup);
+  const removeGroup = useProjectStore((s) => s.removeGroup);
+  const renameGroup = useProjectStore((s) => s.renameGroup);
+  const toggleGroupCollapsed = useProjectStore((s) => s.toggleGroupCollapsed);
+  const moveProjectToGroup = useProjectStore((s) => s.moveProjectToGroup);
+
   const showAddModal = useUIStore((s) => s.addProjectModalOpen);
   const setShowAddModal = useUIStore((s) => s.setAddProjectModalOpen);
 
-  // Load real projects from IPC on mount
+  // Track which group was just created so GroupHeader can auto-enter rename mode
+  const [newGroupId, setNewGroupId] = useState<string | null>(null);
+
+  // Load projects and groups on mount
   useEffect(() => {
-    async function loadProjects(): Promise<void> {
-      if (!window.nexusAPI?.projects) return; // No preload bridge (running outside Electron)
+    async function loadProjectsAndGroups(): Promise<void> {
+      if (!window.nexusAPI?.projects) return;
       try {
         const loaded = await window.nexusAPI.projects.list();
         setProjects(loaded);
@@ -28,11 +162,40 @@ export const ProjectRail = (): React.JSX.Element => {
       } catch (err) {
         console.error('[ProjectRail] failed to load projects:', err);
       }
+
+      try {
+        const data = await window.nexusAPI?.settings?.get() ?? {};
+        const savedGroups = data['projectGroups'];
+        if (Array.isArray(savedGroups)) {
+          setGroups(savedGroups as ProjectGroup[]);
+        }
+      } catch (err) {
+        console.error('[ProjectRail] failed to load groups:', err);
+      }
     }
-    void loadProjects();
+    void loadProjectsAndGroups();
   // Run only once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist groups whenever they change
+  useEffect(() => {
+    if (!window.nexusAPI?.settings) return;
+    void window.nexusAPI.settings.get().then((existing) => {
+      return window.nexusAPI.settings.set({ ...existing, projectGroups: groups });
+    });
+  }, [groups]);
+
+  function handleAddGroup(): void {
+    const created = addGroup('New Group');
+    setNewGroupId(created.id);
+  }
+
+  // Compute grouped and ungrouped sets
+  const groupedProjectIds = new Set(groups.flatMap((g) => g.projectIds));
+  const ungroupedProjects = projects.filter((p) => !groupedProjectIds.has(p.id));
+
+  const hasAnything = projects.length > 0 || groups.length > 0;
 
   return (
     <>
@@ -42,17 +205,29 @@ export const ProjectRail = (): React.JSX.Element => {
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-text-tertiary">
             Projects
           </span>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[12px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
-          >
-            +
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Add group button */}
+            <button
+              onClick={handleAddGroup}
+              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[11px] text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
+              title="New group"
+            >
+              ⊞
+            </button>
+            {/* Add project button */}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[12px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
+              title="Add project"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* Project list */}
         <div className="flex-1 overflow-y-auto px-1.5 py-1">
-          {projects.length === 0 ? (
+          {!hasAnything ? (
             <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
               <span className="font-mono text-[11px] text-text-ghost">No projects yet</span>
               <span className="font-mono text-[10px] text-text-ghost">
@@ -67,18 +242,61 @@ export const ProjectRail = (): React.JSX.Element => {
               </span>
             </div>
           ) : (
-            projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                active={project.id === activeProjectId}
-                gitStatus={gitStatus[project.id]}
-                worktreeCount={worktrees[project.id]?.length}
-                agentCount={undefined}
-                activePhase={undefined}
-                onClick={() => setActiveProject(project.id)}
-              />
-            ))
+            <>
+              {/* Groups with their projects */}
+              {groups.map((group) => {
+                const groupProjects = group.projectIds
+                  .map((id) => projects.find((p) => p.id === id))
+                  .filter((p): p is NonNullable<typeof p> => p !== undefined);
+
+                return (
+                  <div key={group.id}>
+                    <GroupHeader
+                      group={group}
+                      autoRename={group.id === newGroupId}
+                      onToggle={() => toggleGroupCollapsed(group.id)}
+                      onRename={(name) => {
+                        renameGroup(group.id, name);
+                        if (group.id === newGroupId) setNewGroupId(null);
+                      }}
+                      onDelete={() => removeGroup(group.id)}
+                    />
+                    {!group.collapsed && groupProjects.map((project) => (
+                      <div key={project.id} className="pl-2">
+                        <ProjectCard
+                          project={project}
+                          active={project.id === activeProjectId}
+                          gitStatus={gitStatus[project.id]}
+                          worktreeCount={worktrees[project.id]?.length}
+                          agentCount={undefined}
+                          activePhase={undefined}
+                          onClick={() => setActiveProject(project.id)}
+                          groupId={group.id}
+                          groups={groups}
+                          onMoveToGroup={(gId) => moveProjectToGroup(project.id, gId)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+
+              {/* Ungrouped projects */}
+              {ungroupedProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  active={project.id === activeProjectId}
+                  gitStatus={gitStatus[project.id]}
+                  worktreeCount={worktrees[project.id]?.length}
+                  agentCount={undefined}
+                  activePhase={undefined}
+                  onClick={() => setActiveProject(project.id)}
+                  groups={groups}
+                  onMoveToGroup={(gId) => moveProjectToGroup(project.id, gId)}
+                />
+              ))}
+            </>
           )}
         </div>
       </div>

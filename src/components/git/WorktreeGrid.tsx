@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { useUIStore } from '@/stores/uiStore';
+import { usePipelineStore } from '@/stores/pipelineStore';
 import { useGit } from '@/hooks/useGit';
-import type { Worktree, TerminalSession } from '@/types';
+import type { Worktree, TerminalSession, NexusPlugin, PipelineConfig } from '@/types';
 
 // ── Empty State ──────────────────────────────────
 
@@ -100,6 +101,7 @@ const WorktreeCard = ({ worktree, refresh }: WorktreeCardProps): React.JSX.Eleme
 
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showValidateConfig, setShowValidateConfig] = useState(false);
 
   const showError = useCallback((msg: string): void => {
     setError(msg);
@@ -238,12 +240,147 @@ const WorktreeCard = ({ worktree, refresh }: WorktreeCardProps): React.JSX.Eleme
         <WtButton label="terminal" onClick={() => { void handleTerminal(); }} />
         <WtButton label="agent" primary onClick={() => { void handleAgent(); }} />
         <WtButton label="editor" onClick={() => { void handleEditor(); }} />
+        <WtButton label="validate" onClick={() => { setShowValidateConfig((v) => !v); }} />
       </div>
+
+      {/* Inline validate config */}
+      {showValidateConfig && activeProjectId !== null && (
+        <WorktreeValidateConfig
+          projectId={activeProjectId}
+          worktree={worktree}
+          onClose={() => { setShowValidateConfig(false); }}
+        />
+      )}
 
       {/* Inline error */}
       {error !== null && (
         <span className="text-[10px] text-[var(--color-deleted)]">{error}</span>
       )}
+    </div>
+  );
+};
+
+// ── WorktreeValidateConfig ──────────────────────────
+
+interface WorktreeValidateConfigProps {
+  projectId: string;
+  worktree: Worktree;
+  onClose: () => void;
+}
+
+const WorktreeValidateConfig = ({
+  projectId,
+  worktree,
+  onClose,
+}: WorktreeValidateConfigProps): React.JSX.Element => {
+  const addRun = usePipelineStore((s) => s.addRun);
+  const setActiveRun = usePipelineStore((s) => s.setActiveRun);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+
+  const [executePlugins, setExecutePlugins] = useState<NexusPlugin[]>([]);
+  const [validatePlugins, setValidatePlugins] = useState<NexusPlugin[]>([]);
+  const [planPlugins, setPlanPlugins] = useState<NexusPlugin[]>([]);
+  const [executePluginId, setExecutePluginId] = useState('');
+  const [validateChain, setValidateChain] = useState<Array<{ pluginId: string }>>([]);
+
+  useEffect(() => {
+    if (!window.nexusAPI?.plugins) return;
+    void window.nexusAPI.plugins.list('execute').then((plugins) => {
+      setExecutePlugins(plugins);
+      if (plugins.length > 0) setExecutePluginId(plugins[0].id);
+    });
+    void window.nexusAPI.plugins.list('validate').then(setValidatePlugins);
+    void window.nexusAPI.plugins.list('plan').then(setPlanPlugins);
+  }, []);
+
+  const handleRun = useCallback(async (): Promise<void> => {
+    if (!window.nexusAPI?.pipeline) return;
+    const config: PipelineConfig = {
+      name: `Validate ${worktree.branch} ${new Date().toLocaleTimeString()}`,
+      projectId,
+      branch: worktree.branch,
+      worktreePath: worktree.path,
+      plan: { pluginId: planPlugins[0]?.id ?? 'noop' },
+      execute: { pluginId: executePluginId },
+      validate: { chain: validateChain },
+    };
+    try {
+      const run = await window.nexusAPI.pipeline.create(projectId, config);
+      addRun(run);
+      setActiveRun(run.id);
+      setActiveTab('pipeline');
+      await window.nexusAPI.pipeline.start(run.id, 'plan');
+      onClose();
+    } catch (err) {
+      console.error('[WorktreeValidateConfig] run failed:', err);
+    }
+  }, [projectId, worktree, planPlugins, executePluginId, validateChain, addRun, setActiveRun, setActiveTab, onClose]);
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-border-subtle pt-2">
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[10px] text-text-tertiary">Execute Agent:</span>
+        <select
+          value={executePluginId}
+          onChange={(e) => setExecutePluginId(e.target.value)}
+          className="flex-1 rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1.5 py-[3px] font-mono text-[10px] text-text-primary outline-none focus:border-border-strong"
+        >
+          {executePlugins.length === 0 && <option value="">loading...</option>}
+          {executePlugins.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="font-mono text-[10px] text-text-tertiary">Validate:</span>
+        {validateChain.map((step, i) => {
+          const plugin = validatePlugins.find((p) => p.id === step.pluginId);
+          return (
+            <span
+              key={`${step.pluginId}-${i}`}
+              className="flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1 py-[1px] font-mono text-[9px] text-text-secondary"
+            >
+              {plugin?.name ?? step.pluginId}
+              <button
+                onClick={() => setValidateChain((c) => c.filter((_, idx) => idx !== i))}
+                className="cursor-pointer text-text-ghost hover:text-[var(--color-deleted)]"
+              >
+                &times;
+              </button>
+            </span>
+          );
+        })}
+        {validatePlugins.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) {
+                setValidateChain((c) => [...c, { pluginId: e.target.value }]);
+              }
+            }}
+            className="rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1 py-[1px] font-mono text-[9px] text-text-ghost outline-none focus:border-border-strong"
+          >
+            <option value="">+ add step</option>
+            {validatePlugins.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => { void handleRun(); }}
+          className="flex-1 cursor-pointer rounded-[var(--radius-sm)] border border-[var(--phase-execute-dim)] bg-[var(--phase-execute-dim)] py-[4px] text-center font-mono text-[10px] font-medium text-phase-execute transition-all duration-[var(--duration-fast)] hover:bg-phase-execute hover:text-[var(--bg-void)]"
+        >
+          Run Validation
+        </button>
+        <button
+          onClick={onClose}
+          className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-2 py-[4px] font-mono text-[10px] text-text-secondary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:bg-bg-active hover:text-text-primary"
+        >
+          &times;
+        </button>
+      </div>
     </div>
   );
 };
