@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useProjectStore } from '@/stores/projectStore';
 import type { Project, GitStatus, Phase, ProjectGroup } from '@/types';
 import { Badge } from '@/components/shared/Badge';
@@ -37,9 +38,23 @@ export const ProjectCard = ({
   // Truncate branch for display in the rail
   const displayBranch = branchName.length > 16 ? branchName.slice(0, 16) : branchName;
 
-  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [showMoveToGroup, setShowMoveToGroup] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const showContextMenu = menuPos !== null;
+
+  // Close on outside click
+  useEffect(() => {
+    if (!showContextMenu) return;
+    const handler = (e: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuPos(null);
+        setShowMoveToGroup(false);
+      }
+    };
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    return () => { clearTimeout(id); document.removeEventListener('mousedown', handler); };
+  }, [showContextMenu]);
 
   const availableGroups = groups ?? [];
   const hasGroups = availableGroups.length > 0;
@@ -52,7 +67,7 @@ export const ProjectCard = ({
         args: [project.path],
         label: 'Editor',
       });
-      setShowContextMenu(false);
+      setMenuPos(null);
     } catch (err) {
       console.error('[ProjectCard] openInEditor failed:', err);
     }
@@ -65,7 +80,7 @@ export const ProjectCard = ({
         cwd: project.path,
         label: `Terminal - ${project.name}`,
       });
-      setShowContextMenu(false);
+      setMenuPos(null);
     } catch (err) {
       console.error('[ProjectCard] openTerminal failed:', err);
     }
@@ -75,7 +90,7 @@ export const ProjectCard = ({
     try {
       await window.nexusAPI.projects.remove(project.id);
       removeProject(project.id);
-      setShowContextMenu(false);
+      setMenuPos(null);
     } catch (err) {
       console.error('[ProjectCard] remove failed:', err);
     }
@@ -84,7 +99,7 @@ export const ProjectCard = ({
   async function handleRevealInExplorer(): Promise<void> {
     try {
       await window.nexusAPI.shell.showInFolder(project.path);
-      setShowContextMenu(false);
+      setMenuPos(null);
     } catch (err) {
       console.error('[ProjectCard] revealInExplorer failed:', err);
     }
@@ -92,13 +107,17 @@ export const ProjectCard = ({
 
   function handleContextMenu(e: React.MouseEvent<HTMLDivElement>): void {
     e.preventDefault();
-    setShowContextMenu(!showContextMenu);
+    const MENU_W = 192;
+    const MENU_H_EST = 180;
+    const x = Math.min(e.clientX, window.innerWidth - MENU_W - 4);
+    const y = Math.min(e.clientY, window.innerHeight - MENU_H_EST - 4);
+    setMenuPos(menuPos !== null ? null : { x, y });
     setShowMoveToGroup(false);
   }
 
   function handleMoveToGroup(targetGroupId: string | null): void {
     onMoveToGroup?.(targetGroupId);
-    setShowContextMenu(false);
+    setMenuPos(null);
     setShowMoveToGroup(false);
   }
 
@@ -141,11 +160,12 @@ export const ProjectCard = ({
         </div>
       </div>
 
-      {/* Context menu */}
-      {showContextMenu && (
+      {/* Context menu — portal to avoid clipping by parent overflow/z-index */}
+      {showContextMenu && menuPos !== null && createPortal(
         <div
           ref={menuRef}
-          className="absolute bottom-full left-0 mb-1 w-48 rounded-[var(--radius-md)] border border-border-strong bg-bg-surface shadow-lg z-[1001]"
+          style={{ position: 'fixed', top: menuPos.y, left: menuPos.x, zIndex: 9999 }}
+          className="w-48 rounded-[var(--radius-md)] border border-border-strong bg-bg-surface shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -230,7 +250,8 @@ export const ProjectCard = ({
           >
             Remove
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

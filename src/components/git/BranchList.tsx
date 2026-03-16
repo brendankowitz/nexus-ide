@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useProjectStore, selectActiveWorktrees } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -6,12 +6,13 @@ import { useGit } from '@/hooks/useGit';
 import { useToastStore } from '@/stores/toastStore';
 import {
   groupBranches,
-  groupRemoteBranches,
   findHeadPrefix,
   initCollapsedState,
   isPushRejectedNeedingForce,
+  buildRemoteTree,
+  collectTreeKeys,
 } from '@/utils/branchUtils';
-import type { BranchGroup } from '@/utils/branchUtils';
+import type { BranchGroup, RemoteTreeNode, RemoteLeaf } from '@/utils/branchUtils';
 import type { Branch, RemoteBranch, Worktree } from '@/types';
 
 // ── Local types ────────────────────────────────────
@@ -153,6 +154,28 @@ export const BranchList = (): React.JSX.Element => {
   const [remoteOpen, setRemoteOpen] = useState(true);
   const [fetchingAll, setFetchingAll] = useState(false);
 
+  const [filter, setFilter] = useState('');
+
+  const [expandAllGen, setExpandAllGen] = useState(0);
+  const [collapseAllGen, setCollapseAllGen] = useState(0);
+
+  // Auto-expand all groups when a filter is active
+  useEffect(() => {
+    if (!filter.trim()) return;
+    setRemoteOpen(true);
+    setExpandAllGen((v) => v + 1);
+  }, [filter]);
+
+  const handleExpandAll = useCallback(() => {
+    setRemoteOpen(true);
+    setExpandAllGen((v) => v + 1);
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    setRemoteOpen(false);
+    setCollapseAllGen((v) => v + 1);
+  }, []);
+
   const loadRemotes = useCallback(async () => {
     if (!activeProjectId || !window.nexusAPI?.git?.remoteBranches) return;
     try {
@@ -202,13 +225,19 @@ export const BranchList = (): React.JSX.Element => {
   const inWorktree = (b: Branch): boolean =>
     worktrees.some((wt) => !wt.isMainWorktree && (wt.branch === b.name || wt.branch === 'refs/heads/' + b.name));
 
+  const filterLc = filter.toLowerCase();
+
   const visibleBranches = showWorktreeBranches ? branches : branches.filter((b) => !inWorktree(b));
   const hiddenCount = branches.length - visibleBranches.length;
-  const { topLevel, groups } = groupBranches(visibleBranches);
-  const headPrefix = findHeadPrefix(visibleBranches);
+
+  const filteredLocal = filterLc ? visibleBranches.filter((b) => b.name.toLowerCase().includes(filterLc)) : visibleBranches;
+  const filteredRemotes = filterLc ? remoteBranches.filter((rb) => rb.shortName.toLowerCase().includes(filterLc)) : remoteBranches;
+
+  const { topLevel, groups } = groupBranches(filteredLocal);
+  const headPrefix = findHeadPrefix(filteredLocal);
 
   const remotesByName = new Map<string, RemoteBranch[]>();
-  for (const rb of remoteBranches) {
+  for (const rb of filteredRemotes) {
     const list = remotesByName.get(rb.remoteName);
     if (list) list.push(rb); else remotesByName.set(rb.remoteName, [rb]);
   }
@@ -218,14 +247,46 @@ export const BranchList = (): React.JSX.Element => {
       {/* Header */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border-subtle px-4 py-2">
         <span className="font-mono text-[11px] text-text-secondary">
-          {visibleBranches.length} branch{visibleBranches.length !== 1 ? 'es' : ''}
+          {filterLc
+            ? `${filteredLocal.length} of ${visibleBranches.length}`
+            : `${visibleBranches.length} branch${visibleBranches.length !== 1 ? 'es' : ''}`}
         </span>
-        <button
-          onClick={() => { setShowForm((v) => !v); setCreateError(null); }}
-          className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-plan px-2 py-0.5 font-mono text-[10px] text-phase-plan transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-plan-glow)]"
-        >
-          + new
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleExpandAll}
+            title="expand all"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[9px] text-text-ghost transition-colors hover:text-text-secondary"
+          >▾▾</button>
+          <button
+            onClick={handleCollapseAll}
+            title="collapse all"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[9px] text-text-ghost transition-colors hover:text-text-secondary"
+          >▸▸</button>
+          <button
+            onClick={() => { setShowForm((v) => !v); setCreateError(null); }}
+            className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-plan px-2 py-0.5 font-mono text-[10px] text-phase-plan transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-plan-glow)]"
+          >
+            + new
+          </button>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-1.5">
+        <span className="shrink-0 font-mono text-[11px] text-text-ghost">⌕</span>
+        <input
+          type="text" value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setFilter(''); }}
+          placeholder="filter…"
+          className="flex-1 bg-transparent font-mono text-[11px] text-text-primary placeholder:text-text-ghost outline-none"
+        />
+        {filter && (
+          <button onClick={() => setFilter('')}
+            className="cursor-pointer font-mono text-[11px] text-text-ghost transition-colors hover:text-text-secondary">
+            ×
+          </button>
+        )}
       </div>
 
       {/* Inline create form */}
@@ -257,9 +318,9 @@ export const BranchList = (): React.JSX.Element => {
 
       {/* Main scroll area */}
       <div className="flex-1 overflow-y-auto">
-        <BranchListInner topLevel={topLevel} groups={groups} headPrefix={headPrefix} refresh={refreshAll} worktrees={worktrees} />
+        <BranchListInner topLevel={topLevel} groups={groups} headPrefix={headPrefix} refresh={refreshAll} worktrees={worktrees} expandAllGen={expandAllGen} collapseAllGen={collapseAllGen} />
 
-        {hiddenCount > 0 && (
+        {hiddenCount > 0 && !filterLc && (
           <div className="border-t border-border-subtle px-5 py-2">
             <button onClick={() => setShowWorktreeBranches((v) => !v)}
               className="cursor-pointer font-mono text-[11px] text-text-tertiary transition-colors hover:text-text-secondary">
@@ -293,7 +354,7 @@ export const BranchList = (): React.JSX.Element => {
           {remoteOpen && (
             <div className="pb-2">
               {Array.from(remotesByName.entries()).map(([remoteName, rBranches]) => (
-                <RemoteRemoteGroup key={remoteName} remoteName={remoteName} branches={rBranches} refresh={refreshAll} projectId={activeProjectId} />
+                <RemoteRemoteGroup key={remoteName} remoteName={remoteName} branches={rBranches} refresh={refreshAll} projectId={activeProjectId} expandAllGen={expandAllGen} collapseAllGen={collapseAllGen} />
               ))}
               {remoteBranches.length === 0 && (
                 <p className="px-5 py-2 font-mono text-[11px] text-text-ghost">no remote branches — run fetch all</p>
@@ -306,33 +367,88 @@ export const BranchList = (): React.JSX.Element => {
   );
 };
 
-// ── Remote group ───────────────────────────────────
+// ── Remote tree helpers ────────────────────────────
+
+function countLeaves(node: RemoteTreeNode): number {
+  return node.leaves.length + node.children.reduce((s, c) => s + countLeaves(c), 0);
+}
+
+const BRANCH_BASE = 32; // px from left for depth-0 branch items
+const GROUP_BASE  = 20; // px from left for depth-0 group headers
+const DEPTH_STEP  = 14; // px added per depth level
+
+// ── RemoteRemoteGroup ──────────────────────────────
 
 const RemoteRemoteGroup = ({
-  remoteName, branches, refresh, projectId,
-}: { remoteName: string; branches: RemoteBranch[]; refresh: () => Promise<void>; projectId: string | null; }): React.JSX.Element => {
-  const { topLevel, groups } = groupRemoteBranches(branches);
+  remoteName, branches, refresh, projectId, expandAllGen, collapseAllGen,
+}: { remoteName: string; branches: RemoteBranch[]; refresh: () => Promise<void>; projectId: string | null; expandAllGen: number; collapseAllGen: number; }): React.JSX.Element => {
+  const tree = useMemo(() => buildRemoteTree(remoteName, branches), [remoteName, branches]);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const treeKeysRef = useRef<string[]>([]);
+  treeKeysRef.current = useMemo(() => collectTreeKeys(tree), [tree]);
+
+  useEffect(() => { if (expandAllGen === 0) return; setCollapsed({}); }, [expandAllGen]);
+  useEffect(() => {
+    if (collapseAllGen === 0) return;
+    setCollapsed(Object.fromEntries(treeKeysRef.current.map((k) => [k, true])));
+  }, [collapseAllGen]);
+
+  const toggle = useCallback((key: string) => setCollapsed((p) => ({ ...p, [key]: !p[key] })), []);
+  const rootCollapsed = collapsed[tree.key] ?? false;
+
   return (
     <div>
-      {topLevel.map((rb) => <RemoteBranchRow key={rb.name} branch={rb} refresh={refresh} projectId={projectId} />)}
-      {groups.map((group) => (
-        <div key={group.prefix}>
-          <div role="button" tabIndex={0}
-            onClick={() => setCollapsed((p) => ({ ...p, [group.prefix]: !p[group.prefix] }))}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed((p) => ({ ...p, [group.prefix]: !p[group.prefix] })); } }}
-            className="flex cursor-pointer items-center gap-2 px-5 py-1.5 font-mono text-[12px] transition-colors hover:bg-bg-hover">
-            <span className="h-[7px] w-[7px] shrink-0 text-[9px] leading-none text-text-ghost">{collapsed[group.prefix] ? '›' : '‹'}</span>
-            <span className="flex-1 text-[11px] font-medium text-text-tertiary">
-              <span className="text-text-ghost">{remoteName}/</span>{group.prefix}
-            </span>
-            <span className="rounded-[3px] border border-border-strong px-1.5 py-px text-[10px] font-medium text-text-ghost">{group.branches.length}</span>
-          </div>
-          {!collapsed[group.prefix] && group.branches.map((rb) => (
-            <RemoteBranchRow key={rb.name} branch={rb} indented refresh={refresh} projectId={projectId} />
-          ))}
-        </div>
-      ))}
+      {/* Origin-level collapsible header */}
+      <div role="button" tabIndex={0}
+        onClick={() => toggle(tree.key)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(tree.key); } }}
+        className="flex cursor-pointer items-center gap-2 px-5 py-1.5 font-mono transition-colors hover:bg-bg-hover">
+        <span className="text-[9px] text-text-ghost">{rootCollapsed ? '▸' : '▾'}</span>
+        <span className="text-[11px] font-medium text-text-secondary">{remoteName}</span>
+        <span className="rounded-[3px] border border-border-strong px-1 py-px font-mono text-[9px] text-text-ghost">{branches.length}</span>
+      </div>
+      {!rootCollapsed && (
+        <RemoteTreeLevel node={tree} collapsed={collapsed} toggle={toggle} refresh={refresh} projectId={projectId} depth={0} />
+      )}
+    </div>
+  );
+};
+
+// ── RemoteTreeLevel ────────────────────────────────
+
+const RemoteTreeLevel = ({
+  node, collapsed, toggle, refresh, projectId, depth,
+}: { node: RemoteTreeNode; collapsed: Record<string, boolean>; toggle: (k: string) => void; refresh: () => Promise<void>; projectId: string | null; depth: number; }): React.JSX.Element => (
+  <>
+    {node.leaves.map((leaf) => (
+      <RemoteBranchRow key={leaf.branch.name} leaf={leaf} depth={depth} refresh={refresh} projectId={projectId} />
+    ))}
+    {node.children.map((child) => (
+      <RemoteTreeGroupNode key={child.key} node={child} collapsed={collapsed} toggle={toggle} refresh={refresh} projectId={projectId} depth={depth} />
+    ))}
+  </>
+);
+
+// ── RemoteTreeGroupNode ────────────────────────────
+
+const RemoteTreeGroupNode = ({
+  node, collapsed, toggle, refresh, projectId, depth,
+}: { node: RemoteTreeNode; collapsed: Record<string, boolean>; toggle: (k: string) => void; refresh: () => Promise<void>; projectId: string | null; depth: number; }): React.JSX.Element => {
+  const isCollapsed = collapsed[node.key] ?? false;
+  return (
+    <div>
+      <div role="button" tabIndex={0}
+        onClick={() => toggle(node.key)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(node.key); } }}
+        style={{ paddingLeft: `${GROUP_BASE + depth * DEPTH_STEP}px` }}
+        className="flex cursor-pointer items-center gap-2 py-1.5 pr-5 font-mono transition-colors hover:bg-bg-hover">
+        <span className="text-[9px] text-text-ghost">{isCollapsed ? '▸' : '▾'}</span>
+        <span className="flex-1 text-[11px] font-medium text-text-tertiary">{node.label}</span>
+        <span className="rounded-[3px] border border-border-strong px-1.5 py-px text-[10px] font-medium text-text-ghost">{countLeaves(node)}</span>
+      </div>
+      {!isCollapsed && (
+        <RemoteTreeLevel node={node} collapsed={collapsed} toggle={toggle} refresh={refresh} projectId={projectId} depth={depth + 1} />
+      )}
     </div>
   );
 };
@@ -340,8 +456,9 @@ const RemoteRemoteGroup = ({
 // ── RemoteBranchRow ────────────────────────────────
 
 const RemoteBranchRow = ({
-  branch, indented = false, refresh, projectId,
-}: { branch: RemoteBranch; indented?: boolean; refresh: () => Promise<void>; projectId: string | null; }): React.JSX.Element => {
+  leaf, depth, refresh, projectId,
+}: { leaf: RemoteLeaf; depth: number; refresh: () => Promise<void>; projectId: string | null; }): React.JSX.Element => {
+  const { branch, label } = leaf;
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
 
@@ -364,17 +481,12 @@ const RemoteBranchRow = ({
     } finally { setBusy(false); }
   }, [projectId, branch.name, refresh]);
 
-  const slashIdx = branch.shortName.indexOf('/');
-  const displayName = indented && slashIdx !== -1 ? branch.shortName.slice(slashIdx + 1) : branch.shortName;
-
   return (
-    <div className={`group flex flex-col font-mono text-[12px] transition-colors ${indented ? 'pl-[36px] pr-5' : 'px-5'} py-1.5 hover:bg-bg-hover`}>
+    <div style={{ paddingLeft: `${BRANCH_BASE + depth * DEPTH_STEP}px` }}
+      className="group flex flex-col py-1.5 pr-5 font-mono text-[12px] transition-colors hover:bg-bg-hover">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="h-[6px] w-[6px] shrink-0 rounded-full bg-text-ghost" />
-        <span className="min-w-0 flex-1 truncate text-text-tertiary">
-          {!indented && <span className="text-text-ghost">{branch.remoteName}/</span>}
-          <span className="text-text-secondary">{displayName}</span>
-        </span>
+        <span className="min-w-0 flex-1 truncate text-text-secondary">{label}</span>
         <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <PrimaryBtn label={busy ? '…' : 'checkout'} onClick={() => void handleCheckout()} disabled={busy} />
         </div>
@@ -389,9 +501,19 @@ const RemoteBranchRow = ({
 // ── BranchListInner ────────────────────────────────
 
 const BranchListInner = ({
-  topLevel, groups, headPrefix, refresh, worktrees,
-}: { topLevel: Branch[]; groups: BranchGroup[]; headPrefix: string | null; refresh: () => Promise<void>; worktrees: Worktree[]; }): React.JSX.Element => {
+  topLevel, groups, headPrefix, refresh, worktrees, expandAllGen, collapseAllGen,
+}: { topLevel: Branch[]; groups: BranchGroup[]; headPrefix: string | null; refresh: () => Promise<void>; worktrees: Worktree[]; expandAllGen: number; collapseAllGen: number; }): React.JSX.Element => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => initCollapsedState(groups, headPrefix));
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
+  useEffect(() => {
+    if (expandAllGen === 0) return;
+    setCollapsed(Object.fromEntries(groupsRef.current.map((g) => [g.prefix, false])));
+  }, [expandAllGen]);
+  useEffect(() => {
+    if (collapseAllGen === 0) return;
+    setCollapsed(Object.fromEntries(groupsRef.current.map((g) => [g.prefix, true])));
+  }, [collapseAllGen]);
   return (
     <div className="py-2">
       {topLevel.map((b) => <BranchRow key={b.name} branch={b} refresh={refresh} worktrees={worktrees} />)}

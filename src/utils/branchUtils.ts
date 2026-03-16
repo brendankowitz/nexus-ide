@@ -51,6 +51,61 @@ export function initCollapsedState(
   return s;
 }
 
+// ── Remote tree (recursive, path-compressed) ───────
+
+export interface RemoteLeaf { branch: RemoteBranch; label: string; }
+
+export interface RemoteTreeNode {
+  label: string;
+  key: string;
+  leaves: RemoteLeaf[];
+  children: RemoteTreeNode[];
+}
+
+function insertLeaf(node: RemoteTreeNode, parts: string[], branch: RemoteBranch): void {
+  if (parts.length === 1) { node.leaves.push({ branch, label: parts[0]! }); return; }
+  const [head, ...rest] = parts;
+  let child = node.children.find((c) => c.label === head);
+  if (!child) {
+    child = { label: head!, key: `${node.key}/${head}`, leaves: [], children: [] };
+    node.children.push(child);
+  }
+  insertLeaf(child, rest, branch);
+}
+
+function compressNode(node: RemoteTreeNode): void {
+  for (const child of node.children) compressNode(child);
+  const newLeaves: RemoteLeaf[] = [...node.leaves];
+  const newChildren: RemoteTreeNode[] = [];
+  for (const child of node.children) {
+    const total = child.leaves.length + child.children.length;
+    if (total === 1) {
+      if (child.leaves.length === 1) {
+        const leaf = child.leaves[0]!;
+        newLeaves.push({ branch: leaf.branch, label: `${child.label}/${leaf.label}` });
+      } else {
+        const grandchild = child.children[0]!;
+        newChildren.push({ ...grandchild, label: `${child.label}/${grandchild.label}` });
+      }
+    } else {
+      newChildren.push(child);
+    }
+  }
+  node.leaves = newLeaves;
+  node.children = newChildren;
+}
+
+export function buildRemoteTree(remoteName: string, branches: RemoteBranch[]): RemoteTreeNode {
+  const root: RemoteTreeNode = { label: remoteName, key: remoteName, leaves: [], children: [] };
+  for (const branch of branches) insertLeaf(root, branch.shortName.split('/'), branch);
+  compressNode(root);
+  return root;
+}
+
+export function collectTreeKeys(node: RemoteTreeNode): string[] {
+  return [node.key, ...node.children.flatMap(collectTreeKeys)];
+}
+
 // ── Push error detection ───────────────────────────
 
 /**

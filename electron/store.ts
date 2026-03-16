@@ -26,7 +26,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { app } from 'electron';
-import type { Project } from '../src/types/index.js';
+import type { Project, ProjectGroup } from '../src/types/index.js';
 
 /* ─── Schema types ─────────────────────────────────────────────────────────── */
 
@@ -88,6 +88,7 @@ export interface NexusStoreSchema {
   readonly pipeline: PipelineDefaults;
   readonly agents: AgentsConfig;
   readonly projects: readonly StoredProject[];
+  readonly projectGroups: readonly ProjectGroup[];
   /** Cached shell detection result — avoids re-detection on every launch. */
   readonly resolvedShell: string | null;
 }
@@ -123,6 +124,7 @@ const STORE_DEFAULTS: NexusStoreSchema = {
     dotnet: { command: 'dotnet', available: true },
   },
   projects: [],
+  projectGroups: [],
   resolvedShell: null,
 };
 

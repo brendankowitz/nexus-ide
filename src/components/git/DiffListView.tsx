@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { DiffFile, DiffHunk as DiffHunkType, SortColumn, SortDirection } from '@/types';
-import { DiffFileRow } from '@/components/git/DiffFileRow';
+import { DiffFileRow, DEFAULT_COL_WIDTHS } from '@/components/git/DiffFileRow';
+import type { ColWidths } from '@/components/git/DiffFileRow';
 
 interface DiffListViewProps {
   files: DiffFile[];
@@ -11,12 +12,8 @@ interface DiffListViewProps {
   onToggleSelect?: (filePath: string) => void;
 }
 
-const COLUMN_HEADERS: { key: SortColumn; label: string; className: string }[] = [
-  { key: 'name', label: 'File Name', className: 'flex-1 min-w-0' },
-  { key: 'path', label: 'Path', className: 'w-[140px] shrink-0' },
-  { key: 'state', label: 'State', className: 'w-[60px] shrink-0 text-center' },
-  { key: 'changes', label: '+/-', className: 'w-[60px] shrink-0 text-right' },
-];
+type FixedCol = keyof ColWidths;
+const COL_MIN: ColWidths = { path: 50, state: 40, changes: 40 };
 
 function getFileName(filePath: string): string {
   const lastSlash = filePath.lastIndexOf('/');
@@ -38,6 +35,26 @@ export const DiffListView = ({
 }: DiffListViewProps): React.JSX.Element => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [colWidths, setColWidths] = useState<ColWidths>(DEFAULT_COL_WIDTHS);
+
+  const startResize = useCallback((col: FixedCol, e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = colWidths[col];
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent): void => {
+      setColWidths((w) => ({ ...w, [col]: Math.max(COL_MIN[col], startW + (ev.clientX - startX)) }));
+    };
+    const onUp = (): void => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [colWidths]);
 
   const handleColumnClick = (col: SortColumn): void => {
     if (sortColumn === col) {
@@ -79,20 +96,36 @@ export const DiffListView = ({
       <div className="flex items-center gap-2.5 border-b border-border-default px-5 py-1.5">
         {/* Spacer for select + expand + status icons */}
         <div className={`${onToggleSelect !== undefined ? 'w-[56px]' : 'w-[42px]'} shrink-0`} />
-        {COLUMN_HEADERS.map((col) => (
-          <button
-            key={col.key}
-            onClick={() => handleColumnClick(col.key)}
-            className={`cursor-pointer select-none font-mono text-[9px] font-medium uppercase tracking-wider text-text-ghost transition-colors duration-[var(--duration-fast)] hover:text-text-secondary ${col.className}`}
-          >
-            {col.label}
-            {sortColumn === col.key && (
-              <span className="ml-0.5 text-text-tertiary">
-                {sortDirection === 'asc' ? '\u25B4' : '\u25BE'}
-              </span>
-            )}
-          </button>
-        ))}
+        {/* File Name — flex-1, no resize */}
+        <button
+          onClick={() => handleColumnClick('name')}
+          className="flex-1 min-w-0 cursor-pointer select-none text-left font-mono text-[9px] font-medium uppercase tracking-wider text-text-ghost transition-colors hover:text-text-secondary"
+        >
+          File Name{sortColumn === 'name' && <span className="ml-0.5 text-text-tertiary">{sortDirection === 'asc' ? '▴' : '▾'}</span>}
+        </button>
+        {/* Fixed-width columns with resize handles */}
+        {(['path', 'state', 'changes'] as FixedCol[]).map((col, i) => {
+          const labels: Record<FixedCol, string> = { path: 'Path', state: 'State', changes: '+/-' };
+          const aligns: Record<FixedCol, string> = { path: 'text-left', state: 'text-center', changes: 'text-right' };
+          return (
+            <div key={col} className="relative shrink-0" style={{ width: colWidths[col] }}>
+              <button
+                onClick={() => handleColumnClick(col as SortColumn)}
+                className={`w-full cursor-pointer select-none font-mono text-[9px] font-medium uppercase tracking-wider text-text-ghost transition-colors hover:text-text-secondary ${aligns[col]}`}
+              >
+                {labels[col]}{sortColumn === col && <span className="ml-0.5 text-text-tertiary">{sortDirection === 'asc' ? '▴' : '▾'}</span>}
+              </button>
+              {/* Resize handle — on every column including last for symmetry */}
+              <div
+                onMouseDown={(e) => startResize(col, e)}
+                className="group absolute inset-y-0 -right-[5px] w-[10px] cursor-col-resize"
+                style={{ zIndex: 1 }}
+              >
+                <div className="absolute inset-y-1 left-[4px] w-px bg-border-strong opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+            </div>
+          );
+        })}
         {/* Spacer for action buttons */}
         <div className="w-[52px] shrink-0" />
       </div>
@@ -108,6 +141,7 @@ export const DiffListView = ({
           layout="table"
           selected={selectedFiles?.has(file.filePath)}
           onToggleSelect={onToggleSelect}
+          colWidths={colWidths}
         />
       ))}
     </div>

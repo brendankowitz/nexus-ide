@@ -666,7 +666,7 @@ export function registerIpcHandlers(): void {
     async (): Promise<NexusStoreSchema> => {
       try {
         const keys: Array<keyof NexusStoreSchema> = [
-          'editor', 'theme', 'terminal', 'git', 'pipeline', 'agents', 'projects', 'resolvedShell',
+          'editor', 'theme', 'terminal', 'git', 'pipeline', 'agents', 'projects', 'projectGroups', 'resolvedShell',
         ];
         const result = {} as Record<string, unknown>;
         for (const key of keys) {

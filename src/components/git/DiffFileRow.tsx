@@ -4,6 +4,14 @@ import { useProjectStore } from '@/stores/projectStore';
 import { DiffHunk } from '@/components/git/DiffHunk';
 import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
+export interface ColWidths {
+  path: number;
+  state: number;
+  changes: number;
+}
+
+export const DEFAULT_COL_WIDTHS: ColWidths = { path: 140, state: 60, changes: 60 };
+
 export interface DiffFileRowProps {
   file: DiffFile;
   activeProjectId: string | null;
@@ -13,6 +21,7 @@ export interface DiffFileRowProps {
   layout?: 'default' | 'table' | 'compact';
   selected?: boolean;
   onToggleSelect?: (filePath: string) => void;
+  colWidths?: ColWidths;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -30,6 +39,7 @@ export const DiffFileRow = ({
   layout = 'default',
   selected,
   onToggleSelect,
+  colWidths = DEFAULT_COL_WIDTHS,
 }: DiffFileRowProps): React.JSX.Element => {
   const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
@@ -196,15 +206,15 @@ export const DiffFileRow = ({
                 </span>
               )}
             </span>
-            <span className="w-[140px] shrink-0 truncate text-[11px] text-text-tertiary">
+            <span className="shrink-0 truncate text-[11px] text-text-tertiary" style={{ width: colWidths.path }}>
               {dir}
             </span>
-            <span className="w-[60px] shrink-0 text-center">
+            <span className="shrink-0 text-center" style={{ width: colWidths.state }}>
               <span className="inline-block rounded-[3px] bg-bg-surface px-1.5 py-[1px] text-[9px] text-text-ghost">
                 unstaged
               </span>
             </span>
-            <div className="flex w-[60px] shrink-0 justify-end gap-1.5 text-[10px]">
+            <div className="flex shrink-0 justify-end gap-1.5 text-[10px]" style={{ width: colWidths.changes }}>
               {file.additions > 0 && (
                 <span className="text-[var(--color-added)]">
                   +{file.additions}
