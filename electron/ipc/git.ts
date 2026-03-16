@@ -20,6 +20,7 @@ import type {
   DiffHunk,
   DiffLine,
   GitStatus,
+  RemoteBranch,
   Worktree,
 } from '../../src/types/index.js';
 
@@ -314,6 +315,151 @@ export async function createBranch(
   const result = await execGit(projectPath, ['checkout', '-b', branchName]);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || 'Failed to create branch');
+  }
+}
+
+/* ─── getRemoteBranches ────────────────────────────────────────────────────── */
+
+/**
+ * List remote branches via `git branch -r`.
+ */
+export async function getRemoteBranches(projectPath: string): Promise<RemoteBranch[]> {
+  try {
+    const result = await execGit(projectPath, [
+      'branch', '-r', '--format=%(refname:short)',
+    ]);
+    if (result.exitCode !== 0) return [];
+    const branches: RemoteBranch[] = [];
+    for (const line of splitLines(result.stdout)) {
+      const name = line.trim();
+      if (!name || name.includes(' -> ')) continue; // skip HEAD pointer lines
+      const slashIdx = name.indexOf('/');
+      if (slashIdx === -1) continue;
+      const remoteName = name.slice(0, slashIdx);
+      const shortName = name.slice(slashIdx + 1);
+      branches.push({ name, remoteName, shortName });
+    }
+    return branches;
+  } catch {
+    return [];
+  }
+}
+
+/* ─── fetchRemote ──────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git fetch [remote] [branch]`.
+ */
+export async function fetchRemote(
+  projectPath: string,
+  remote = 'origin',
+  branch?: string,
+): Promise<void> {
+  const args = branch ? ['fetch', remote, branch] : ['fetch', remote];
+  const result = await execGit(projectPath, args);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Fetch failed');
+  }
+}
+
+/* ─── pullBranch ───────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git pull` in the given path (uses tracked upstream).
+ */
+export async function pullBranch(projectPath: string): Promise<void> {
+  const result = await execGit(projectPath, ['pull']);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Pull failed');
+  }
+}
+
+/* ─── pushBranch ───────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git push [--force-with-lease] [-u] origin <branch>`.
+ * If no upstream is set, passes `-u` to set tracking.
+ */
+export async function pushBranch(
+  projectPath: string,
+  branchName: string,
+  options: { force?: boolean; setUpstream?: boolean } = {},
+): Promise<void> {
+  const args: string[] = ['push'];
+  if (options.force) args.push('--force-with-lease');
+  if (options.setUpstream) args.push('-u');
+  args.push('origin', branchName);
+  const result = await execGit(projectPath, args);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Push failed');
+  }
+}
+
+/* ─── renameBranch ─────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git branch -m <oldName> <newName>`.
+ */
+export async function renameBranch(
+  projectPath: string,
+  oldName: string,
+  newName: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['branch', '-m', oldName, newName]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Rename failed');
+  }
+}
+
+/* ─── setUpstream ──────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git branch --set-upstream-to=<upstream> <branchName>`.
+ * upstream should be like "origin/main".
+ */
+export async function setUpstream(
+  projectPath: string,
+  branchName: string,
+  upstream: string,
+): Promise<void> {
+  const result = await execGit(projectPath, [
+    'branch', `--set-upstream-to=${upstream}`, branchName,
+  ]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to set upstream');
+  }
+}
+
+/* ─── unsetUpstream ────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git branch --unset-upstream <branchName>`.
+ */
+export async function unsetUpstream(
+  projectPath: string,
+  branchName: string,
+): Promise<void> {
+  const result = await execGit(projectPath, [
+    'branch', '--unset-upstream', branchName,
+  ]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to unset upstream');
+  }
+}
+
+/* ─── checkoutRemoteBranch ─────────────────────────────────────────────────── */
+
+/**
+ * Run `git checkout --track <remoteRef>` (e.g. "origin/feature/x").
+ * Creates a local tracking branch with the short name of the remote ref.
+ */
+export async function checkoutRemoteBranch(
+  projectPath: string,
+  remoteRef: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['checkout', '--track', remoteRef]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to checkout remote branch');
   }
 }
 

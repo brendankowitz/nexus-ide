@@ -56,6 +56,12 @@ export interface GitStatus {
   behind: number;
 }
 
+export interface RemoteBranch {
+  name: string;        // full ref: "origin/feature/x"
+  remoteName: string;  // "origin"
+  shortName: string;   // "feature/x"
+}
+
 export interface DiffFile {
   filePath: string;
   status: 'M' | 'A' | 'D' | 'R';
@@ -331,6 +337,14 @@ export interface NexusAPI {
     removeWorktree(projectId: string, path: string): Promise<void>;
     checkout(projectId: string, branch: string): Promise<void>;
     createBranch(projectId: string, branchName: string): Promise<void>;
+    remoteBranches(projectId: string): Promise<RemoteBranch[]>;
+    fetch(projectId: string, remote?: string, branch?: string): Promise<void>;
+    pull(projectId: string): Promise<void>;
+    push(projectId: string, branchName: string, force?: boolean, setUpstreamFlag?: boolean): Promise<void>;
+    renameBranch(projectId: string, oldName: string, newName: string): Promise<void>;
+    setUpstream(projectId: string, branchName: string, upstream: string): Promise<void>;
+    unsetUpstream(projectId: string, branchName: string): Promise<void>;
+    checkoutRemote(projectId: string, remoteRef: string): Promise<void>;
     diff(projectId: string, worktreePath?: string): Promise<DiffFile[]>;
     diffHunks(projectId: string, filePath: string, worktreePath?: string): Promise<DiffHunk[]>;
     commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]>;

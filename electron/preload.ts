@@ -36,6 +36,7 @@ import type {
   PluginContext,
   PluginOutput,
   Project,
+  RemoteBranch,
   TerminalOptions,
   TerminalSession,
   Worktree,
@@ -56,6 +57,14 @@ const CH = {
   GIT_WORKTREE_REMOVE: 'git:worktree-remove',
   GIT_CHECKOUT: 'git:checkout',
   GIT_BRANCH_CREATE: 'git:branch-create',
+  GIT_REMOTE_BRANCHES: 'git:remote-branches',
+  GIT_FETCH: 'git:fetch',
+  GIT_PULL: 'git:pull',
+  GIT_PUSH: 'git:push',
+  GIT_BRANCH_RENAME: 'git:branch-rename',
+  GIT_BRANCH_SET_UPSTREAM: 'git:branch-set-upstream',
+  GIT_BRANCH_UNSET_UPSTREAM: 'git:branch-unset-upstream',
+  GIT_CHECKOUT_REMOTE: 'git:checkout-remote',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
   GIT_COMMIT_DIFF: 'git:commit-diff',
@@ -154,6 +163,30 @@ const nexusAPIImpl = {
     },
     createBranch(projectId: string, branchName: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_BRANCH_CREATE, projectId, branchName) as Promise<void>;
+    },
+    remoteBranches(projectId: string): Promise<RemoteBranch[]> {
+      return ipcRenderer.invoke(CH.GIT_REMOTE_BRANCHES, projectId) as Promise<RemoteBranch[]>;
+    },
+    fetch(projectId: string, remote?: string, branch?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_FETCH, projectId, remote, branch) as Promise<void>;
+    },
+    pull(projectId: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_PULL, projectId) as Promise<void>;
+    },
+    push(projectId: string, branchName: string, force?: boolean, setUpstreamFlag?: boolean): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_PUSH, projectId, branchName, force, setUpstreamFlag) as Promise<void>;
+    },
+    renameBranch(projectId: string, oldName: string, newName: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_BRANCH_RENAME, projectId, oldName, newName) as Promise<void>;
+    },
+    setUpstream(projectId: string, branchName: string, upstream: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_BRANCH_SET_UPSTREAM, projectId, branchName, upstream) as Promise<void>;
+    },
+    unsetUpstream(projectId: string, branchName: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_BRANCH_UNSET_UPSTREAM, projectId, branchName) as Promise<void>;
+    },
+    checkoutRemote(projectId: string, remoteRef: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_CHECKOUT_REMOTE, projectId, remoteRef) as Promise<void>;
     },
     diff(projectId: string, worktreePath?: string): Promise<DiffFile[]> {
       return ipcRenderer.invoke(CH.GIT_DIFF, projectId, worktreePath) as Promise<DiffFile[]>;

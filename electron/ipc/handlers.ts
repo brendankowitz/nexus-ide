@@ -43,11 +43,19 @@ import { join } from 'node:path';
 import {
   getStatus,
   getBranches,
+  getRemoteBranches,
   getWorktrees,
   createWorktree,
   removeWorktree,
   checkout,
   createBranch,
+  fetchRemote,
+  pullBranch,
+  pushBranch,
+  renameBranch,
+  setUpstream,
+  unsetUpstream,
+  checkoutRemoteBranch,
   getDiff,
   getDiffHunks,
   getCommitDiff,
@@ -104,6 +112,7 @@ import type {
   PipelineConfig,
   PipelineRun,
   Project,
+  RemoteBranch,
   TerminalOptions,
   TerminalSession,
   Worktree,
@@ -125,6 +134,14 @@ export const IPC_CHANNELS = {
   GIT_WORKTREE_REMOVE: 'git:worktree-remove',
   GIT_CHECKOUT: 'git:checkout',
   GIT_BRANCH_CREATE: 'git:branch-create',
+  GIT_REMOTE_BRANCHES: 'git:remote-branches',
+  GIT_FETCH: 'git:fetch',
+  GIT_PULL: 'git:pull',
+  GIT_PUSH: 'git:push',
+  GIT_BRANCH_RENAME: 'git:branch-rename',
+  GIT_BRANCH_SET_UPSTREAM: 'git:branch-set-upstream',
+  GIT_BRANCH_UNSET_UPSTREAM: 'git:branch-unset-upstream',
+  GIT_CHECKOUT_REMOTE: 'git:checkout-remote',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
   GIT_COMMIT_DIFF: 'git:commit-diff',
@@ -409,6 +426,108 @@ export function registerIpcHandlers(): void {
         await createBranch(projectPath, branchName);
       } catch (err) {
         throwIpcError('GIT_BRANCH_CREATE_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_REMOTE_BRANCHES,
+    async (_event, projectId: string): Promise<RemoteBranch[]> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        return await getRemoteBranches(projectPath);
+      } catch (err) {
+        throwIpcError('GIT_REMOTE_BRANCHES_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_FETCH,
+    async (_event, projectId: string, remote?: string, branch?: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await fetchRemote(projectPath, remote, branch);
+      } catch (err) {
+        throwIpcError('GIT_FETCH_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_PULL,
+    async (_event, projectId: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await pullBranch(projectPath);
+      } catch (err) {
+        throwIpcError('GIT_PULL_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_PUSH,
+    async (
+      _event,
+      projectId: string,
+      branchName: string,
+      force?: boolean,
+      setUpstreamFlag?: boolean,
+    ): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await pushBranch(projectPath, branchName, { force, setUpstream: setUpstreamFlag });
+      } catch (err) {
+        throwIpcError('GIT_PUSH_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_BRANCH_RENAME,
+    async (_event, projectId: string, oldName: string, newName: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await renameBranch(projectPath, oldName, newName);
+      } catch (err) {
+        throwIpcError('GIT_BRANCH_RENAME_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_BRANCH_SET_UPSTREAM,
+    async (_event, projectId: string, branchName: string, upstream: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await setUpstream(projectPath, branchName, upstream);
+      } catch (err) {
+        throwIpcError('GIT_BRANCH_SET_UPSTREAM_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_BRANCH_UNSET_UPSTREAM,
+    async (_event, projectId: string, branchName: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await unsetUpstream(projectPath, branchName);
+      } catch (err) {
+        throwIpcError('GIT_BRANCH_UNSET_UPSTREAM_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_CHECKOUT_REMOTE,
+    async (_event, projectId: string, remoteRef: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await checkoutRemoteBranch(projectPath, remoteRef);
+      } catch (err) {
+        throwIpcError('GIT_CHECKOUT_REMOTE_FAILED', err);
       }
     },
   );
