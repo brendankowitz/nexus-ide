@@ -1,10 +1,22 @@
+import { useState, useEffect } from 'react';
+import type { ThemedToken } from 'shiki';
+import { tokeniseLines } from '@/lib/syntaxHighlight';
 import type { DiffHunk as DiffHunkType } from '@/types';
 
 interface DiffHunkProps {
   hunk: DiffHunkType;
+  filePath?: string;
 }
 
-export const DiffHunk = ({ hunk }: DiffHunkProps): React.JSX.Element => {
+export const DiffHunk = ({ hunk, filePath }: DiffHunkProps): React.JSX.Element => {
+  const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
+
+  useEffect(() => {
+    if (!filePath) return;
+    const lines = hunk.lines.map((l) => l.content);
+    void tokeniseLines(lines, filePath).then(setTokens);
+  }, [filePath, hunk]);
+
   return (
     <div>
       {/* Hunk header */}
@@ -35,6 +47,8 @@ export const DiffHunk = ({ hunk }: DiffHunkProps): React.JSX.Element => {
               ? 'text-[var(--color-deleted)] opacity-50'
               : 'text-text-ghost';
 
+        const lineTokens = tokens?.[idx];
+
         return (
           <div key={`${line.oldLineNumber ?? 'n'}-${line.newLineNumber ?? 'n'}-${idx}`} className={`flex font-mono text-[11px] leading-[1.6] pr-5 ${lineClass}`}>
             {/* New line number */}
@@ -50,8 +64,14 @@ export const DiffHunk = ({ hunk }: DiffHunkProps): React.JSX.Element => {
               {line.oldLineNumber ?? ''}
             </span>
             {/* Content */}
-            <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-pre px-3 ${contentColor}`} style={{ tabSize: 4 }}>
-              {line.content}
+            <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-pre px-3 ${lineTokens ? '' : contentColor}`} style={{ tabSize: 4 }}>
+              {lineTokens
+                ? lineTokens.map((token, ti) => (
+                    <span key={ti} style={{ color: token.color }}>
+                      {token.content}
+                    </span>
+                  ))
+                : line.content}
             </span>
           </div>
         );

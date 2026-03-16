@@ -33,6 +33,9 @@ function fromStoreData(data: Record<string, unknown>): Partial<SettingsState> {
     if (typeof git['autoFetchInterval'] === 'number') result.autoFetchInterval = git['autoFetchInterval'];
   }
 
+  const ed = data['externalDiff'] as Record<string, unknown> | undefined;
+  result.externalDiffCommand = typeof ed?.['command'] === 'string' ? ed['command'] : '';
+
   const agents = data['agents'] as Record<string, unknown> | undefined;
   if (agents) {
     const claudeCode = agents['claudeCode'] as Record<string, unknown> | undefined;
@@ -79,6 +82,7 @@ interface SettingsState {
   statusPollInterval: number;
   autoFetchInterval: number;
   longPaths: boolean;
+  externalDiffCommand: string;
   // Tool Paths
   claudeCodePath: string;
   claudeCodeMode: string;
@@ -110,6 +114,7 @@ const defaultSettings: SettingsState = {
   statusPollInterval: 3000,
   autoFetchInterval: 60000,
   longPaths: false,
+  externalDiffCommand: '',
   claudeCodePath: 'claude',
   claudeCodeMode: '',
   claudeCodeWorktrees: false,
@@ -375,6 +380,7 @@ export const SettingsView = (): React.JSX.Element => {
           gh: { command: settings.githubCLIPath, available: true },
           dotnet: { command: settings.dotnetPath, available: true },
         },
+        externalDiff: { command: settings.externalDiffCommand },
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -569,6 +575,14 @@ export const SettingsView = (): React.JSX.Element => {
                   {settings.longPaths ? 'enabled' : 'disabled'}
                 </span>
               </label>
+            </Field>
+
+            <Field label="External diff tool" hint="Use {original} and {modified} as path placeholders">
+              <TextInput
+                value={settings.externalDiffCommand}
+                onChange={(v) => set('externalDiffCommand', v)}
+                placeholder="code --diff {original} {modified}"
+              />
             </Field>
           </Section>
 

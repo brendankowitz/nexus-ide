@@ -345,6 +345,26 @@ export async function killSession(sessionId: string): Promise<void> {
   sessions.delete(sessionId);
 }
 
+/* ─── killAllSessions ──────────────────────────────────────────────────────── */
+
+/**
+ * Kill every running terminal session. Called on app quit to avoid rogue processes.
+ */
+export function killAllSessions(): void {
+  for (const sessionId of Array.from(sessions.keys())) {
+    const entry = sessions.get(sessionId);
+    if (!entry) continue;
+    if (entry.status !== 'exited' && entry.ptyProcess !== null) {
+      try {
+        entry.ptyProcess.kill();
+      } catch {
+        // Ignore — process may have already exited
+      }
+    }
+    sessions.delete(sessionId);
+  }
+}
+
 /* ─── listSessions ─────────────────────────────────────────────────────────── */
 
 /**

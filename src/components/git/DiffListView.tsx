@@ -10,6 +10,7 @@ interface DiffListViewProps {
   onOpenFullDiff: (file: DiffFile, hunks: DiffHunkType[]) => void;
   selectedFiles?: Set<string>;
   onToggleSelect?: (filePath: string) => void;
+  externalDiffCommand?: string;
 }
 
 type FixedCol = keyof ColWidths;
@@ -32,6 +33,7 @@ export const DiffListView = ({
   onOpenFullDiff,
   selectedFiles,
   onToggleSelect,
+  externalDiffCommand,
 }: DiffListViewProps): React.JSX.Element => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -142,6 +144,7 @@ export const DiffListView = ({
           selected={selectedFiles?.has(file.filePath)}
           onToggleSelect={onToggleSelect}
           colWidths={colWidths}
+          externalDiffCommand={externalDiffCommand}
         />
       ))}
     </div>

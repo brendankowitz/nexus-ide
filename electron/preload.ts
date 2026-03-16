@@ -74,6 +74,9 @@ const CH = {
   GIT_UNSTAGE: 'git:unstage',
   GIT_STAGE_ALL: 'git:stage-all',
   GIT_COMMIT: 'git:commit',
+  GIT_FILE_CONTENT: 'git:file-content',
+  GIT_REVERT_FILE: 'git:revert-file',
+  GIT_LAUNCH_EXTERNAL_DIFF: 'git:launch-external-diff',
 
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
@@ -214,6 +217,15 @@ const nexusAPIImpl = {
     },
     commit(projectId: string, message: string, worktreePath?: string): Promise<string> {
       return ipcRenderer.invoke(CH.GIT_COMMIT, projectId, message, worktreePath) as Promise<string>;
+    },
+    fileContent(projectId: string, filePath: string): Promise<{ head: string | null; working: string }> {
+      return ipcRenderer.invoke(CH.GIT_FILE_CONTENT, projectId, filePath) as Promise<{ head: string | null; working: string }>;
+    },
+    revertFile(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_REVERT_FILE, projectId, filePath, worktreePath) as Promise<void>;
+    },
+    launchExternalDiff(projectId: string, filePath: string, fileStatus: 'M' | 'A' | 'D' | 'R', worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_LAUNCH_EXTERNAL_DIFF, projectId, filePath, fileStatus, worktreePath) as Promise<void>;
     },
   },
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { DiffHunk } from '@/components/git/DiffHunk';
@@ -22,6 +22,7 @@ export interface DiffFileRowProps {
   selected?: boolean;
   onToggleSelect?: (filePath: string) => void;
   colWidths?: ColWidths;
+  externalDiffCommand?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -40,6 +41,7 @@ export const DiffFileRow = ({
   selected,
   onToggleSelect,
   colWidths = DEFAULT_COL_WIDTHS,
+  externalDiffCommand,
 }: DiffFileRowProps): React.JSX.Element => {
   const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
@@ -53,6 +55,8 @@ export const DiffFileRow = ({
 
   const [hunks, setHunks] = useState<DiffHunkType[]>(file.hunks);
   const [loadingHunks, setLoadingHunks] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Load hunks on expand when not yet fetched
   useEffect(() => {
@@ -69,6 +73,40 @@ export const DiffFileRow = ({
       )
       .finally(() => setLoadingHunks(false));
   }, [isExpanded, hunks.length, activeProjectId, file.filePath, activeWorktreePath]);
+
+  // Click-outside to close ellipsis menu
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const handleRevert = useCallback(async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!window.confirm(`Discard all changes to ${file.filePath}? This cannot be undone.`)) return;
+    if (!activeProjectId || !window.nexusAPI?.git) return;
+    try {
+      await window.nexusAPI.git.revertFile(activeProjectId, file.filePath);
+      await onRefresh();
+    } catch (err) { console.error('[revert]', err); }
+  }, [activeProjectId, file.filePath, onRefresh]);
+
+  const handleLaunchExternalDiff = useCallback(async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!activeProjectId || !window.nexusAPI?.git) return;
+    try {
+      await window.nexusAPI.git.launchExternalDiff(activeProjectId, file.filePath, file.status);
+    } catch (err) { console.error('[external diff]', err); }
+  }, [activeProjectId, file.filePath, file.status]);
+
+  const canRevert = file.status === 'M' || file.status === 'D';
+  const hasExternalDiff = Boolean(externalDiffCommand?.trim());
+  const showMenu = canRevert || hasExternalDiff;
 
   // Split path into directory and filename
   const lastSlash = file.filePath.lastIndexOf('/');
@@ -316,6 +354,37 @@ export const DiffFileRow = ({
         >
           {isReviewed ? '\u2713' : '\u25cb'}
         </button>
+
+        {/* Ellipsis menu */}
+        {showMenu && (
+          <div ref={menuRef} className="relative ml-0.5">
+            <button
+              title="More actions"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+              className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+            >
+              <svg width="9" height="3" viewBox="0 0 9 3" fill="currentColor">
+                <circle cx="1.5" cy="1.5" r="1" /><circle cx="4.5" cy="1.5" r="1" /><circle cx="7.5" cy="1.5" r="1" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-5 z-50 min-w-[160px] rounded-[var(--radius-sm)] border border-border-default bg-bg-overlay py-1 shadow-lg">
+                {canRevert && (
+                  <button onClick={(e) => { void handleRevert(e); }}
+                    className="w-full cursor-pointer px-3 py-1.5 text-left font-mono text-[11px] text-[var(--color-deleted)] hover:bg-bg-hover">
+                    Revert changes
+                  </button>
+                )}
+                {hasExternalDiff && (
+                  <button onClick={(e) => { void handleLaunchExternalDiff(e); }}
+                    className="w-full cursor-pointer px-3 py-1.5 text-left font-mono text-[11px] text-text-secondary hover:bg-bg-hover">
+                    Open in external diff
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Hunks */}
@@ -335,7 +404,7 @@ export const DiffFileRow = ({
             </div>
           )}
           {hunks.map((hunk) => (
-            <DiffHunk key={hunk.header} hunk={hunk} />
+            <DiffHunk key={hunk.header} hunk={hunk} filePath={file.filePath} />
           ))}
         </div>
       )}

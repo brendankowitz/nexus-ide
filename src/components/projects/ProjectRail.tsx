@@ -157,6 +157,9 @@ export const ProjectRail = (): React.JSX.Element => {
   // Track which group was just created so GroupHeader can auto-enter rename mode
   const [newGroupId, setNewGroupId] = useState<string | null>(null);
 
+  // Prevents the save effect from firing before the initial load completes
+  const hasLoadedGroupsRef = useRef(false);
+
   // Load projects and groups on mount
   useEffect(() => {
     async function loadProjectsAndGroups(): Promise<void> {
@@ -180,18 +183,19 @@ export const ProjectRail = (): React.JSX.Element => {
       } catch (err) {
         console.error('[ProjectRail] failed to load groups:', err);
       }
+
+      hasLoadedGroupsRef.current = true;
     }
     void loadProjectsAndGroups();
   // Run only once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist groups whenever they change
+  // Persist groups whenever they change (skip until initial load is complete)
   useEffect(() => {
     if (!window.nexusAPI?.settings) return;
-    void window.nexusAPI.settings.get().then((existing) => {
-      return window.nexusAPI.settings.set({ ...existing, projectGroups: groups });
-    });
+    if (!hasLoadedGroupsRef.current) return;
+    void window.nexusAPI.settings.set({ projectGroups: groups });
   }, [groups]);
 
   function handleAddGroup(): void {

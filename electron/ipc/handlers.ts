@@ -65,6 +65,9 @@ import {
   unstageFile,
   stageAll,
   commit,
+  getFileContent,
+  revertFile,
+  launchExternalDiff,
 } from './git.js';
 
 import {
@@ -86,7 +89,7 @@ import {
   store,
 } from '../store.js';
 
-import type { NexusStoreSchema } from '../store.js';
+import type { NexusStoreSchema, ExternalDiffConfig } from '../store.js';
 
 import { startWatching, stopWatching, onGitChange } from './watcher.js';
 
@@ -151,6 +154,9 @@ export const IPC_CHANNELS = {
   GIT_UNSTAGE: 'git:unstage',
   GIT_STAGE_ALL: 'git:stage-all',
   GIT_COMMIT: 'git:commit',
+  GIT_FILE_CONTENT: 'git:file-content',
+  GIT_REVERT_FILE: 'git:revert-file',
+  GIT_LAUNCH_EXTERNAL_DIFF: 'git:launch-external-diff',
 
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
@@ -636,6 +642,18 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNELS.GIT_REVERT_FILE,
+    async (_event, projectId: string, filePath: string, worktreePath?: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await revertFile(worktreePath ?? projectPath, filePath);
+      } catch (err) {
+        throwIpcError('GIT_REVERT_FILE_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
     IPC_CHANNELS.GIT_STAGE_ALL,
     async (_event, projectId: string, worktreePath?: string): Promise<void> => {
       try {
@@ -659,6 +677,44 @@ export function registerIpcHandlers(): void {
     },
   );
 
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_FILE_CONTENT,
+    async (
+      _event,
+      projectId: string,
+      filePath: string,
+    ): Promise<{ head: string | null; working: string }> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        return await getFileContent(projectPath, filePath);
+      } catch (err) {
+        throwIpcError('GIT_FILE_CONTENT_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_LAUNCH_EXTERNAL_DIFF,
+    async (
+      _event,
+      projectId: string,
+      filePath: string,
+      fileStatus: 'M' | 'A' | 'D' | 'R',
+      worktreePath?: string,
+    ): Promise<void> => {
+      try {
+        const command = (store.get('externalDiff') as ExternalDiffConfig).command;
+        if (!command.trim()) {
+          throw new Error('No external diff tool configured');
+        }
+        const projectPath = resolveProjectPath(projectId);
+        await launchExternalDiff(worktreePath ?? projectPath, filePath, fileStatus, command);
+      } catch (err) {
+        throwIpcError('GIT_LAUNCH_EXTERNAL_DIFF_FAILED', err);
+      }
+    },
+  );
+
   /* ── Settings ─────────────────────────────────────────────────────────── */
 
   ipcMain.handle(
@@ -666,7 +722,7 @@ export function registerIpcHandlers(): void {
     async (): Promise<NexusStoreSchema> => {
       try {
         const keys: Array<keyof NexusStoreSchema> = [
-          'editor', 'theme', 'terminal', 'git', 'pipeline', 'agents', 'projects', 'projectGroups', 'resolvedShell',
+          'editor', 'theme', 'terminal', 'git', 'pipeline', 'agents', 'projects', 'projectGroups', 'resolvedShell', 'externalDiff',
         ];
         const result = {} as Record<string, unknown>;
         for (const key of keys) {

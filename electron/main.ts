@@ -2,7 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 
 import { registerIpcHandlers } from './ipc/handlers.js';
-import { augmentPathFromSystem, detectDefaultShell } from './ipc/terminal.js';
+import { augmentPathFromSystem, detectDefaultShell, killAllSessions } from './ipc/terminal.js';
 
 /* ─── Remote debugging (dev only) ─── */
 
@@ -75,6 +75,10 @@ app.whenReady().then(() => {
   detectDefaultShell();
   registerIpcHandlers();
   createWindow();
+});
+
+app.on('before-quit', () => {
+  killAllSessions();
 });
 
 app.on('window-all-closed', () => {

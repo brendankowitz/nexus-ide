@@ -81,6 +81,17 @@ export const DevPane = (): React.JSX.Element => {
   const subscribedRef = useRef<Set<string>>(new Set());
   const cleanupsRef = useRef<Map<string, () => void>>(new Map());
 
+  // When the active project changes, reset activeSessionId if it belongs to another project
+  const activeProjectId = activeProject?.id ?? null;
+  useEffect(() => {
+    const { sessions: s, activeSessionId: cur, setActiveSession: set } = useTerminalStore.getState();
+    const projectSessions = s.filter(x => activeProjectId !== null && x.projectId === activeProjectId);
+    if (cur !== null && !projectSessions.some(x => x.id === cur)) {
+      set(projectSessions[0]?.id ?? null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectId]);
+
   // Split sessions: active project vs other projects
   const projectSessions = sessions.filter(
     (s) => activeProject !== null && s.projectId === activeProject.id,

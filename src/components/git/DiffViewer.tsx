@@ -127,6 +127,7 @@ export const DiffViewer = (): React.JSX.Element => {
 
   const [hideReviewed, setHideReviewed] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [externalDiffCommand, setExternalDiffCommand] = useState('');
 
   const loadDiff = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
@@ -146,6 +147,14 @@ export const DiffViewer = (): React.JSX.Element => {
   useEffect(() => {
     void loadDiff();
   }, [loadDiff]);
+
+  useEffect(() => {
+    if (!window.nexusAPI?.settings) return;
+    void window.nexusAPI.settings.get().then((data) => {
+      const ed = data['externalDiff'] as Record<string, unknown> | undefined;
+      if (typeof ed?.['command'] === 'string') setExternalDiffCommand(ed['command']);
+    });
+  }, []);
 
   useEffect(() => {
     if (isCommitting) {
@@ -260,6 +269,7 @@ export const DiffViewer = (): React.JSX.Element => {
             onOpenFullDiff={handleOpenFullDiff}
             selectedFiles={selectedFiles}
             onToggleSelect={handleToggleSelect}
+            externalDiffCommand={externalDiffCommand}
           />
         );
       case 'tree':
@@ -271,6 +281,7 @@ export const DiffViewer = (): React.JSX.Element => {
             onOpenFullDiff={handleOpenFullDiff}
             selectedFiles={selectedFiles}
             onToggleSelect={handleToggleSelect}
+            externalDiffCommand={externalDiffCommand}
           />
         );
       case 'groups':
@@ -282,6 +293,7 @@ export const DiffViewer = (): React.JSX.Element => {
             onOpenFullDiff={handleOpenFullDiff}
             selectedFiles={selectedFiles}
             onToggleSelect={handleToggleSelect}
+            externalDiffCommand={externalDiffCommand}
           />
         );
     }
@@ -375,6 +387,7 @@ export const DiffViewer = (): React.JSX.Element => {
         <FullDiffPanel
           file={fullDiffEntry.file}
           hunks={fullDiffEntry.hunks}
+          activeProjectId={activeProjectId}
           onClose={() => setFullDiffEntry(null)}
         />
       )}

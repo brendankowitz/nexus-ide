@@ -11,6 +11,10 @@
  *   - Spawn options include windowsHide: true (handled inside dugite).
  */
 
+import { tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { exec as dugiteExec } from 'dugite';
 
 import type {
@@ -679,6 +683,91 @@ export async function getDiffHunks(
   }
 }
 
+/* ─── getFileContent ───────────────────────────────────────────────────────── */
+
+/**
+ * Returns the HEAD and working-tree content of a file.
+ * head is null when the file doesn't exist in HEAD (newly added file).
+ */
+export async function getFileContent(
+  projectPath: string,
+  filePath: string,
+): Promise<{ head: string | null; working: string }> {
+  const normalizedPath = normalizePath(filePath);
+
+  let head: string | null = null;
+  try {
+    const show = await execGit(projectPath, ['show', `HEAD:${normalizedPath}`]);
+    if (show.exitCode === 0) {
+      head = show.stdout;
+    }
+  } catch {
+    head = null;
+  }
+
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const working = await readFile(join(projectPath, filePath), 'utf8');
+
+  return { head, working };
+}
+
+/* ─── launchExternalDiff ────────────────────────────────────────────────────── */
+
+/**
+ * Write HEAD content to a temp file and spawn a configured external diff tool.
+ * The process is detached and fire-and-forget.
+ */
+export async function launchExternalDiff(
+  projectPath: string,
+  filePath: string,
+  fileStatus: 'M' | 'A' | 'D' | 'R',
+  commandTemplate: string,
+): Promise<void> {
+  const normalizedPath = normalizePath(filePath);
+
+  // 1. Generate temp path preserving the file extension
+  const tempPath = join(
+    tmpdir(),
+    `nexus-diff-${Date.now()}-${Math.random().toString(36).slice(2)}${extname(filePath)}`,
+  ).replace(/\\/g, '/');
+
+  // 2. HEAD content: new files have no HEAD counterpart
+  let headContent = '';
+  if (fileStatus !== 'A') {
+    try {
+      const show = await execGit(projectPath, ['show', `HEAD:${normalizedPath}`]);
+      if (show.exitCode === 0) {
+        headContent = show.stdout;
+      }
+    } catch {
+      // Fall through with empty content
+    }
+  }
+
+  // 3. Write HEAD content to temp file
+  await writeFile(tempPath, headContent, 'utf8');
+
+  // 4. Working path (forward-slash normalized)
+  const workingPath = join(projectPath, filePath).replace(/\\/g, '/');
+
+  // 5. Substitute placeholders in template
+  let finalCommand = commandTemplate;
+  if (commandTemplate.includes('{original}') || commandTemplate.includes('{modified}')) {
+    finalCommand = commandTemplate
+      .replace('{original}', tempPath)
+      .replace('{modified}', workingPath);
+  } else {
+    // No placeholders — append both paths
+    finalCommand = `${commandTemplate} ${tempPath} ${workingPath}`;
+  }
+
+  // 6. Split and spawn detached
+  const parts = finalCommand.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return;
+  spawn(parts[0], parts.slice(1), { detached: true, stdio: 'ignore', shell: true }).unref();
+}
+
 /* ─── stageFile ────────────────────────────────────────────────────────────── */
 
 /**
@@ -709,6 +798,19 @@ export async function unstageFile(
   if (result.exitCode !== 0 && result.exitCode !== 1) {
     throw new Error(result.stderr || `Failed to unstage file: ${filePath}`);
   }
+}
+
+/* ─── revertFile ───────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git checkout HEAD -- <filePath>` to discard working-tree changes.
+ * Only valid for modified (M) or deleted (D) files — new files have no HEAD.
+ */
+export async function revertFile(
+  projectPath: string,
+  filePath: string,
+): Promise<void> {
+  await execGit(projectPath, ['checkout', 'HEAD', '--', normalizePath(filePath)]);
 }
 
 /* ─── stageAll ─────────────────────────────────────────────────────────────── */

@@ -1,14 +1,21 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { DiffEditor } from '@monaco-editor/react';
 import { DiffHunk } from '@/components/git/DiffHunk';
+import { monacoLang } from '@/lib/languageFromPath';
+import '@/lib/monacoSetup';
 import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
 interface FullDiffPanelProps {
   file: DiffFile;
   hunks: DiffHunkType[];
+  activeProjectId: string | null;
   onClose: () => void;
 }
 
-export const FullDiffPanel = ({ file, hunks, onClose }: FullDiffPanelProps): React.JSX.Element => {
+export const FullDiffPanel = ({ file, hunks, activeProjectId, onClose }: FullDiffPanelProps): React.JSX.Element => {
+  const [fileContent, setFileContent] = useState<{ head: string | null; working: string } | null>(null);
+  const [contentLoading, setContentLoading] = useState(true);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -17,6 +24,20 @@ export const FullDiffPanel = ({ file, hunks, onClose }: FullDiffPanelProps): Rea
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  // Fetch full file content for Monaco
+  useEffect(() => {
+    if (!activeProjectId || !window.nexusAPI?.git) {
+      setContentLoading(false);
+      return;
+    }
+    setContentLoading(true);
+    void window.nexusAPI.git
+      .fileContent(activeProjectId, file.filePath)
+      .then(setFileContent)
+      .catch(() => setFileContent(null))
+      .finally(() => setContentLoading(false));
+  }, [activeProjectId, file.filePath]);
 
   const lastSlash = file.filePath.lastIndexOf('/');
   const dir = lastSlash >= 0 ? file.filePath.slice(0, lastSlash + 1) : '';
@@ -27,6 +48,49 @@ export const FullDiffPanel = ({ file, hunks, onClose }: FullDiffPanelProps): Rea
     A: 'bg-[var(--color-added)] text-[var(--bg-void)]',
     D: 'bg-[var(--color-deleted)] text-white',
     R: 'bg-[var(--color-info)] text-[var(--bg-void)]',
+  };
+
+  const renderContent = (): React.JSX.Element => {
+    if (contentLoading) {
+      return (
+        <div className="flex items-center gap-2 px-5 py-4">
+          <div className="h-2.5 w-2.5 animate-spin rounded-full border border-text-ghost border-t-phase-plan" />
+          <span className="font-mono text-[10px] text-text-tertiary">Loading...</span>
+        </div>
+      );
+    }
+
+    if (fileContent !== null) {
+      return (
+        <DiffEditor
+          height="100%"
+          original={fileContent.head ?? ''}
+          modified={fileContent.working}
+          language={monacoLang(file.filePath)}
+          theme="vs-dark"
+          options={{
+            readOnly: true,
+            renderSideBySide: false,
+            folding: true,
+            foldingStrategy: 'indentation',
+            minimap: { enabled: true },
+          }}
+        />
+      );
+    }
+
+    // Fallback: hunk list with Shiki
+    return (
+      <>
+        {hunks.length === 0 ? (
+          <div className="px-5 py-3 font-mono text-[10px] text-text-ghost">No changes to display</div>
+        ) : (
+          hunks.map((hunk) => (
+            <DiffHunk key={hunk.header} hunk={hunk} filePath={file.filePath} />
+          ))
+        )}
+      </>
+    );
   };
 
   return (
@@ -85,15 +149,9 @@ export const FullDiffPanel = ({ file, hunks, onClose }: FullDiffPanelProps): Rea
           </button>
         </div>
 
-        {/* Scrollable hunk content */}
-        <div className="flex-1 overflow-auto">
-          {hunks.length === 0 ? (
-            <div className="px-5 py-3 font-mono text-[10px] text-text-ghost">No changes to display</div>
-          ) : (
-            hunks.map((hunk) => (
-              <DiffHunk key={hunk.header} hunk={hunk} />
-            ))
-          )}
+        {/* Content area */}
+        <div className={`flex-1 min-h-0 ${fileContent !== null && !contentLoading ? '' : 'overflow-auto'}`}>
+          {renderContent()}
         </div>
       </div>
 

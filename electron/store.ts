@@ -80,6 +80,10 @@ export interface StoredProject {
   readonly lastOpened: number;
 }
 
+export interface ExternalDiffConfig {
+  readonly command: string;  // full template, e.g. "code --diff {original} {modified}"
+}
+
 export interface NexusStoreSchema {
   readonly editor: EditorConfig;
   readonly theme: 'dark' | 'light';
@@ -91,6 +95,7 @@ export interface NexusStoreSchema {
   readonly projectGroups: readonly ProjectGroup[];
   /** Cached shell detection result — avoids re-detection on every launch. */
   readonly resolvedShell: string | null;
+  readonly externalDiff: ExternalDiffConfig;
 }
 
 /* ─── Defaults ─────────────────────────────────────────────────────────────── */
@@ -126,6 +131,7 @@ const STORE_DEFAULTS: NexusStoreSchema = {
   projects: [],
   projectGroups: [],
   resolvedShell: null,
+  externalDiff: { command: '' },
 };
 
 /* ─── JSON-file persistent store ──────────────────────────────────────────── */
