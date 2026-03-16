@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nexus-ide-windows-${{ needs.version.outputs.semVer }}
-          path: release/**/*.exe
+          path: release/*Setup*.exe
           if-no-files-found: error
           retention-days: 90
 
@@ -98,6 +98,6 @@ jobs:
             Download the `.exe` installer below and run it.
 
             > Built from commit ${{ github.sha }}
-          files: release/**/*.exe
+          files: release/*Setup*.exe
           fail_on_unmatched_files: true
           make_latest: true
