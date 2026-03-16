@@ -4,66 +4,19 @@ import { useProjectStore, selectActiveWorktrees } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useGit } from '@/hooks/useGit';
 import { useToastStore } from '@/stores/toastStore';
+import {
+  groupBranches,
+  groupRemoteBranches,
+  findHeadPrefix,
+  initCollapsedState,
+  isPushRejectedNeedingForce,
+} from '@/utils/branchUtils';
+import type { BranchGroup } from '@/utils/branchUtils';
 import type { Branch, RemoteBranch, Worktree } from '@/types';
 
-// ── Types ──────────────────────────────────────────
+// ── Local types ────────────────────────────────────
 
-interface BranchGroup { prefix: string; branches: Branch[]; }
-interface GroupedBranches { topLevel: Branch[]; groups: BranchGroup[]; }
-interface RemoteGroup { prefix: string; branches: RemoteBranch[]; }
-interface GroupedRemotes { topLevel: RemoteBranch[]; groups: RemoteGroup[]; }
 type BranchOp = 'checkout' | 'push' | 'force' | 'pull' | 'rename' | 'track' | 'untrack' | 'worktree';
-
-// ── Helpers ───────────────────────────────────────
-
-function groupBranches(branches: Branch[]): GroupedBranches {
-  const topLevel: Branch[] = [];
-  const groupMap = new Map<string, Branch[]>();
-  for (const b of branches) {
-    const i = b.name.indexOf('/');
-    if (i === -1) { topLevel.push(b); continue; }
-    const p = b.name.slice(0, i);
-    const ex = groupMap.get(p);
-    if (ex) ex.push(b); else groupMap.set(p, [b]);
-  }
-  return { topLevel, groups: Array.from(groupMap.entries()).map(([prefix, branches]) => ({ prefix, branches })) };
-}
-
-function groupRemoteBranches(branches: RemoteBranch[]): GroupedRemotes {
-  const topLevel: RemoteBranch[] = [];
-  const groupMap = new Map<string, RemoteBranch[]>();
-  for (const b of branches) {
-    const i = b.shortName.indexOf('/');
-    if (i === -1) { topLevel.push(b); continue; }
-    const p = b.shortName.slice(0, i);
-    const ex = groupMap.get(p);
-    if (ex) ex.push(b); else groupMap.set(p, [b]);
-  }
-  return { topLevel, groups: Array.from(groupMap.entries()).map(([prefix, branches]) => ({ prefix, branches })) };
-}
-
-function findHeadPrefix(branches: Branch[]): string | null {
-  for (const b of branches) {
-    if (b.isHead) { const i = b.name.indexOf('/'); return i !== -1 ? b.name.slice(0, i) : null; }
-  }
-  return null;
-}
-
-function initCollapsedState(groups: BranchGroup[], headPrefix: string | null): Record<string, boolean> {
-  const s: Record<string, boolean> = {};
-  for (const g of groups) s[g.prefix] = g.prefix !== headPrefix;
-  return s;
-}
-
-/** Returns true if a push rejection error message indicates force push is needed. */
-function isPushRejectedNeedingForce(msg: string): boolean {
-  return (
-    msg.includes('non-fast-forward') ||
-    msg.includes('Updates were rejected') ||
-    msg.includes('fetch first') ||
-    msg.includes('rejected') && msg.includes('tip of your current branch is behind')
-  );
-}
 
 // ── Loading / Empty ────────────────────────────────
 

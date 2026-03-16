@@ -1,0 +1,100 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      fullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: "6.x"
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v3
+
+      - name: Display version
+        run: echo "Building version ${{ steps.gitversion.outputs.semVer }}"
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: version
+    env:
+      VERSION: ${{ needs.version.outputs.semVer }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build renderer + main
+        run: npm run build
+
+      - name: Set version in package.json
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $pkg.version = "$env:VERSION"
+          $pkg | ConvertTo-Json -Depth 100 | Set-Content package.json
+        shell: pwsh
+
+      - name: Package Windows installer
+        run: npm run package:win
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-ide-windows-${{ needs.version.outputs.semVer }}
+          path: release/**/*.exe
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.semVer }}
+          name: "Nexus IDE v${{ needs.version.outputs.semVer }}"
+          body: |
+            ## Nexus IDE v${{ needs.version.outputs.semVer }}
+
+            ### Install
+            Download the `.exe` installer below and run it.
+
+            > Built from commit ${{ github.sha }}
+          files: release/**/*.exe
+          fail_on_unmatched_files: true
+          make_latest: true
