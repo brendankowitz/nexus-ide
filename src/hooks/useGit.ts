@@ -18,6 +18,7 @@ export interface UseGitReturn {
 
 export function useGit(): UseGitReturn {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const { setBranches, setWorktrees, updateGitStatus } = useProjectStore();
 
   const [loading, setLoading] = useState(false);
@@ -40,10 +41,11 @@ export function useGit(): UseGitReturn {
     setError(null);
 
     try {
+      const activeWt = getProjectState().activeWorktreePath ?? undefined;
       const [branches, worktrees, status, diffs] = await Promise.all([
         window.nexusAPI.git.branches(projectId),
         window.nexusAPI.git.worktrees(projectId),
-        window.nexusAPI.git.status(projectId),
+        window.nexusAPI.git.status(projectId, activeWt),
         window.nexusAPI.git.diff(projectId),
       ]);
 
@@ -99,7 +101,7 @@ export function useGit(): UseGitReturn {
         intervalRef.current = null;
       }
     };
-  }, [activeProjectId, fetchAll]);
+  }, [activeProjectId, activeWorktreePath, fetchAll]);
 
   return { loading, error, diffFiles, refresh: fetchAll };
 }

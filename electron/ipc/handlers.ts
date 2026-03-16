@@ -47,6 +47,7 @@ import {
   createWorktree,
   removeWorktree,
   checkout,
+  createBranch,
   getDiff,
   getDiffHunks,
   getCommitDiff,
@@ -123,6 +124,7 @@ export const IPC_CHANNELS = {
   GIT_WORKTREE_CREATE: 'git:worktree-create',
   GIT_WORKTREE_REMOVE: 'git:worktree-remove',
   GIT_CHECKOUT: 'git:checkout',
+  GIT_BRANCH_CREATE: 'git:branch-create',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
   GIT_COMMIT_DIFF: 'git:commit-diff',
@@ -316,10 +318,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_STATUS,
-    async (_event, projectId: string): Promise<GitStatus> => {
+    async (_event, projectId: string, worktreePath?: string): Promise<GitStatus> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getStatus(projectPath);
+        return await getStatus(worktreePath ?? projectPath);
       } catch (err) {
         throwIpcError('GIT_STATUS_FAILED', err);
       }
@@ -328,10 +330,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_BRANCHES,
-    async (_event, projectId: string): Promise<Branch[]> => {
+    async (_event, projectId: string, worktreePath?: string): Promise<Branch[]> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getBranches(projectPath);
+        return await getBranches(worktreePath ?? projectPath);
       } catch (err) {
         throwIpcError('GIT_BRANCHES_FAILED', err);
       }
@@ -400,11 +402,23 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
-    IPC_CHANNELS.GIT_DIFF,
-    async (_event, projectId: string): Promise<DiffFile[]> => {
+    IPC_CHANNELS.GIT_BRANCH_CREATE,
+    async (_event, projectId: string, branchName: string): Promise<void> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getDiff(projectPath);
+        await createBranch(projectPath, branchName);
+      } catch (err) {
+        throwIpcError('GIT_BRANCH_CREATE_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_DIFF,
+    async (_event, projectId: string, worktreePath?: string): Promise<DiffFile[]> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        return await getDiff(worktreePath ?? projectPath);
       } catch (err) {
         throwIpcError('GIT_DIFF_FAILED', err);
       }
@@ -417,10 +431,11 @@ export function registerIpcHandlers(): void {
       _event,
       projectId: string,
       filePath: string,
+      worktreePath?: string,
     ): Promise<DiffHunk[]> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getDiffHunks(projectPath, filePath);
+        return await getDiffHunks(worktreePath ?? projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_DIFF_HUNKS_FAILED', err);
       }
@@ -466,10 +481,11 @@ export function registerIpcHandlers(): void {
       _event,
       projectId: string,
       count?: number,
+      worktreePath?: string,
     ): Promise<Commit[]> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getLog(projectPath, count);
+        return await getLog(worktreePath ?? projectPath, count);
       } catch (err) {
         throwIpcError('GIT_LOG_FAILED', err);
       }
@@ -478,10 +494,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_STAGE,
-    async (_event, projectId: string, filePath: string): Promise<void> => {
+    async (_event, projectId: string, filePath: string, worktreePath?: string): Promise<void> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        await stageFile(projectPath, filePath);
+        await stageFile(worktreePath ?? projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_STAGE_FAILED', err);
       }
@@ -490,10 +506,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_UNSTAGE,
-    async (_event, projectId: string, filePath: string): Promise<void> => {
+    async (_event, projectId: string, filePath: string, worktreePath?: string): Promise<void> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        await unstageFile(projectPath, filePath);
+        await unstageFile(worktreePath ?? projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_UNSTAGE_FAILED', err);
       }
@@ -502,10 +518,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_STAGE_ALL,
-    async (_event, projectId: string): Promise<void> => {
+    async (_event, projectId: string, worktreePath?: string): Promise<void> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        await stageAll(projectPath);
+        await stageAll(worktreePath ?? projectPath);
       } catch (err) {
         throwIpcError('GIT_STAGE_ALL_FAILED', err);
       }
@@ -514,10 +530,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.GIT_COMMIT,
-    async (_event, projectId: string, message: string): Promise<string> => {
+    async (_event, projectId: string, message: string, worktreePath?: string): Promise<string> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await commit(projectPath, message);
+        return await commit(worktreePath ?? projectPath, message);
       } catch (err) {
         throwIpcError('GIT_COMMIT_FAILED', err);
       }

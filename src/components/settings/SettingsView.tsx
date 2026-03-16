@@ -33,19 +33,12 @@ function fromStoreData(data: Record<string, unknown>): Partial<SettingsState> {
     if (typeof git['autoFetchInterval'] === 'number') result.autoFetchInterval = git['autoFetchInterval'];
   }
 
-  const pipeline = data['pipeline'] as Record<string, unknown> | undefined;
-  if (pipeline) {
-    if (typeof pipeline['defaultPlan'] === 'string') result.defaultPlanPlugin = pipeline['defaultPlan'];
-    if (typeof pipeline['defaultExecute'] === 'string') result.defaultExecutePlugin = pipeline['defaultExecute'];
-    const chain = pipeline['defaultValidateChain'];
-    if (Array.isArray(chain)) result.defaultValidationChain = chain as string[];
-  }
-
   const agents = data['agents'] as Record<string, unknown> | undefined;
   if (agents) {
     const claudeCode = agents['claudeCode'] as Record<string, unknown> | undefined;
     if (claudeCode && typeof claudeCode['command'] === 'string') result.claudeCodePath = claudeCode['command'];
     if (claudeCode && typeof claudeCode['mode'] === 'string') result.claudeCodeMode = claudeCode['mode'];
+    if (claudeCode && claudeCode['worktrees'] === true) result.claudeCodeWorktrees = true;
     const copilotCli = agents['copilotCli'] as Record<string, unknown> | undefined;
     if (copilotCli && typeof copilotCli['command'] === 'string') result.githubCopilotPath = copilotCli['command'];
     if (copilotCli && typeof copilotCli['mode'] === 'string') result.copilotMode = copilotCli['mode'];
@@ -89,6 +82,7 @@ interface SettingsState {
   // Tool Paths
   claudeCodePath: string;
   claudeCodeMode: string;
+  claudeCodeWorktrees: boolean;
   githubCopilotPath: string;
   copilotMode: string;
   aiderPath: string;
@@ -96,15 +90,7 @@ interface SettingsState {
   githubCLIPath: string;
   dotnetPath: string;
   customTools: CustomTool[];
-  // Pipeline Defaults
-  defaultPlanPlugin: string;
-  defaultExecutePlugin: string;
-  defaultValidationChain: string[];
 }
-
-const PLAN_PLUGINS = ['fn-investigation', 'spec-kit', 'claude-planner', 'custom-prompt'] as const;
-const EXECUTE_PLUGINS = ['fn-task', 'copilot-cli', 'aider', 'manual'] as const;
-const VALIDATE_PLUGINS = ['lint', 'typecheck', 'test', 'build', 'custom'] as const;
 
 function detectShell(): string {
   if (typeof window !== 'undefined' && (window as unknown as { electron?: { process?: { env?: { SHELL?: string; COMSPEC?: string } } } }).electron?.process?.env?.SHELL) {
@@ -126,6 +112,7 @@ const defaultSettings: SettingsState = {
   longPaths: false,
   claudeCodePath: 'claude',
   claudeCodeMode: '',
+  claudeCodeWorktrees: false,
   githubCopilotPath: 'copilot',
   copilotMode: '',
   aiderPath: 'aider',
@@ -133,9 +120,6 @@ const defaultSettings: SettingsState = {
   githubCLIPath: 'gh',
   dotnetPath: 'dotnet',
   customTools: [],
-  defaultPlanPlugin: 'fn-investigation',
-  defaultExecutePlugin: 'fn-task',
-  defaultValidationChain: ['typecheck', 'lint', 'test'],
 };
 
 // ---------------------------------------------------------------------------
@@ -243,70 +227,6 @@ const DetectButton = ({ onClick, label = 'detect' }: DetectButtonProps): React.J
 // ---------------------------------------------------------------------------
 // Validation Chain reorderable list
 // ---------------------------------------------------------------------------
-
-interface ValidationChainProps {
-  chain: string[];
-  onChange: (chain: string[]) => void;
-}
-
-const ValidationChainEditor = ({ chain, onChange }: ValidationChainProps): React.JSX.Element => {
-  const moveUp = (index: number): void => {
-    if (index === 0) return;
-    const next = [...chain];
-    [next[index - 1], next[index]] = [next[index], next[index - 1]];
-    onChange(next);
-  };
-
-  const moveDown = (index: number): void => {
-    if (index === chain.length - 1) return;
-    const next = [...chain];
-    [next[index], next[index + 1]] = [next[index + 1], next[index]];
-    onChange(next);
-  };
-
-  const remove = (index: number): void => {
-    onChange(chain.filter((_, i) => i !== index));
-  };
-
-  const available = VALIDATE_PLUGINS.filter((p) => !chain.includes(p));
-
-  const add = (plugin: string): void => {
-    if (plugin && !chain.includes(plugin)) {
-      onChange([...chain, plugin]);
-    }
-  };
-
-  return (
-    <div className="space-y-1.5">
-      {chain.map((item, i) => (
-        <div
-          key={item}
-          className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border-subtle bg-bg-surface px-2.5 py-1.5"
-        >
-          <span className="w-4 shrink-0 font-mono text-[10px] text-text-ghost">{i + 1}</span>
-          <span className="flex-1 font-mono text-[12px] text-text-primary">{item}</span>
-          <div className="flex items-center gap-1">
-            <ChevronButton direction="up" disabled={i === 0} onClick={() => moveUp(i)} />
-            <ChevronButton direction="down" disabled={i === chain.length - 1} onClick={() => moveDown(i)} />
-            <RemoveButton onClick={() => remove(i)} />
-          </div>
-        </div>
-      ))}
-      {available.length > 0 && (
-        <select
-          defaultValue=""
-          onChange={(e) => { add(e.target.value); e.target.value = ''; }}
-          className={selectClass + ' w-full mt-1'}
-        >
-          <option value="" disabled>+ add validator</option>
-          {available.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-};
 
 const ChevronButton = ({
   direction,
@@ -447,13 +367,8 @@ export const SettingsView = (): React.JSX.Element => {
           statusPollInterval: settings.statusPollInterval,
           autoFetchInterval: settings.autoFetchInterval,
         },
-        pipeline: {
-          defaultPlan: settings.defaultPlanPlugin,
-          defaultExecute: settings.defaultExecutePlugin,
-          defaultValidateChain: settings.defaultValidationChain,
-        },
         agents: {
-          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), available: true },
+          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), ...(settings.claudeCodeWorktrees ? { worktrees: true } : {}), available: true },
           copilotCli: { command: settings.githubCopilotPath, ...(settings.copilotMode ? { mode: settings.copilotMode } : {}), available: true },
           aider: { command: settings.aiderPath, available: false },
           az: { command: settings.azureCLIPath, available: true },
@@ -484,7 +399,7 @@ export const SettingsView = (): React.JSX.Element => {
       const command = settings[key];
       void window.nexusAPI.settings.set({
         agents: {
-          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), available: true },
+          claudeCode: { command: settings.claudeCodePath, ...(settings.claudeCodeMode ? { mode: settings.claudeCodeMode } : {}), ...(settings.claudeCodeWorktrees ? { worktrees: true } : {}), available: true },
           copilotCli: { command: settings.githubCopilotPath, ...(settings.copilotMode ? { mode: settings.copilotMode } : {}), available: true },
           aider: { command: settings.aiderPath, available: false },
           az: { command: settings.azureCLIPath, available: true },
@@ -680,6 +595,24 @@ export const SettingsView = (): React.JSX.Element => {
                     <option value="--dangerously-skip-permissions">--dangerously-skip-permissions (yolo)</option>
                   </select>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-text-tertiary w-10 shrink-0">flags</span>
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <div
+                      onClick={() => set('claudeCodeWorktrees', !settings.claudeCodeWorktrees)}
+                      className={`relative h-[18px] w-8 rounded-full transition-colors duration-[var(--duration-fast)] ${
+                        settings.claudeCodeWorktrees ? 'bg-phase-execute' : 'bg-bg-active'
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-text-primary shadow-sm transition-transform duration-[var(--duration-fast)] ${
+                          settings.claudeCodeWorktrees ? 'translate-x-[14px]' : 'translate-x-[2px]'
+                        }`}
+                      />
+                    </div>
+                    <span className="font-mono text-[11px] text-text-tertiary">--worktrees</span>
+                  </label>
+                </div>
               </div>
             </Field>
 
@@ -755,40 +688,6 @@ export const SettingsView = (): React.JSX.Element => {
               <CustomToolsEditor
                 tools={settings.customTools}
                 onChange={(v) => set('customTools', v)}
-              />
-            </Field>
-          </Section>
-
-          {/* Pipeline Defaults */}
-          <Section title="pipeline defaults">
-            <Field label="Default plan plugin">
-              <select
-                value={settings.defaultPlanPlugin}
-                onChange={(e) => set('defaultPlanPlugin', e.target.value)}
-                className={selectClass}
-              >
-                {PLAN_PLUGINS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Default execute plugin">
-              <select
-                value={settings.defaultExecutePlugin}
-                onChange={(e) => set('defaultExecutePlugin', e.target.value)}
-                className={selectClass}
-              >
-                {EXECUTE_PLUGINS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Validation chain" hint="Drag to reorder validators">
-              <ValidationChainEditor
-                chain={settings.defaultValidationChain}
-                onChange={(v) => set('defaultValidationChain', v)}
               />
             </Field>
           </Section>

@@ -6,32 +6,22 @@ import '@xterm/xterm/css/xterm.css';
 import { useTerminalStore } from '@/stores/terminalStore';
 import type { ClaudeStatus } from '@/types';
 
-/* ─── ContextGauge ──────────────────────────────────────────────────────────── */
+/* ─── Session accent config ─────────────────────────────────────────────────── */
 
-interface ContextGaugeProps {
-  percent: number;
+interface HeaderConfig {
+  accent: string;
+  accentDim: string;
+  dotRunning: string;
 }
 
-const ContextGauge = ({ percent }: ContextGaugeProps): React.JSX.Element => {
-  const filled = Math.round(percent / 20); // 5 blocks total
-  const blocks = Array.from({ length: 5 }, (_, i) => i < filled);
-  const color =
-    percent > 80
-      ? 'var(--color-danger)'
-      : percent > 50
-        ? 'var(--color-warning)'
-        : 'var(--phase-execute)';
-
-  return (
-    <span className="font-mono text-[9px]" style={{ color }}>
-      {blocks.map((fill, i) => (
-        <span key={i} style={{ opacity: fill ? 1 : 0.2 }}>
-          ▰
-        </span>
-      ))}
-    </span>
-  );
-};
+function getHeaderConfig(sessionType: string | undefined): HeaderConfig {
+  switch (sessionType) {
+    case 'claude':  return { accent: 'var(--phase-plan)',  accentDim: 'var(--phase-plan-dim)',          dotRunning: 'bg-[var(--phase-plan)] animate-pulse' };
+    case 'copilot': return { accent: '#38bdf8',            accentDim: 'rgba(56,189,248,0.15)',           dotRunning: 'bg-[#38bdf8] animate-pulse' };
+    case 'aider':   return { accent: '#f97316',            accentDim: 'rgba(249,115,22,0.15)',           dotRunning: 'bg-[#f97316] animate-pulse' };
+    default:        return { accent: 'var(--phase-execute)', accentDim: 'var(--phase-execute-dim)',      dotRunning: 'bg-[var(--phase-execute)] animate-pulse' };
+  }
+}
 
 /* ─── TerminalHeader ────────────────────────────────────────────────────────── */
 
@@ -40,19 +30,12 @@ interface TerminalHeaderProps {
   onKill?: () => void;
 }
 
-const statusDotClass: Record<string, string> = {
-  running: 'bg-phase-execute animate-pulse',
-  idle: 'bg-text-ghost',
-  exited: 'bg-sem-danger',
-  claude: 'bg-phase-plan animate-pulse',
-};
-
 const TerminalHeader = ({ sessionId, onKill }: TerminalHeaderProps): React.JSX.Element => {
   const session = useTerminalStore((s) => s.sessions.find((x) => x.id === sessionId));
   const updateSession = useTerminalStore((s) => s.updateSession);
 
-  const isClaudeSession =
-    session?.sessionType === 'claude' || session?.command === 'claude';
+  const isClaudeSession = session?.sessionType === 'claude' || session?.command === 'claude';
+  const isCopilot = session?.sessionType === 'copilot';
 
   // Subscribe to live Claude status pushes from the main process
   useEffect(() => {
@@ -67,76 +50,148 @@ const TerminalHeader = ({ sessionId, onKill }: TerminalHeaderProps): React.JSX.E
 
   if (session === undefined) return <></>;
 
-  const dotClass =
-    isClaudeSession && session.status === 'running'
-      ? statusDotClass['claude']
-      : (statusDotClass[session.status] ?? 'bg-text-ghost');
+  const cfg = getHeaderConfig(session.sessionType);
+
+  const dotClass = session.status === 'exited'
+    ? 'bg-[var(--color-danger)]'
+    : session.status === 'idle'
+      ? 'bg-text-ghost'
+      : cfg.dotRunning;
 
   const claudeStatus = session.claudeStatus;
+  const ctxPct = claudeStatus?.contextPercent;
+
   const worktreeDisplay = session.worktreePath
     ? session.worktreePath.replace(/\\/g, '/').split('/').slice(-2).join('/')
     : null;
 
+  const ctxFillColor = ctxPct === undefined ? cfg.accent
+    : ctxPct > 80 ? 'var(--color-danger)'
+    : ctxPct > 50 ? 'var(--color-warning)'
+    : cfg.accent;
+
+  const formatTokens = (n: number): string =>
+    n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+
   return (
-    <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-void px-3">
-      {/* Status dot */}
-      <div className={`h-2 w-2 rounded-full ${dotClass}`} />
-
-      {/* Session label */}
-      <span className="font-mono text-[10px] text-text-secondary">{session.label}</span>
-
-      {/* Separator + working directory */}
-      {worktreeDisplay !== null && (
-        <>
-          <span className="text-text-ghost">·</span>
-          <span className="max-w-[180px] truncate font-mono text-[10px] text-text-ghost">
-            {worktreeDisplay}
-          </span>
-        </>
-      )}
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Claude status section */}
-      {isClaudeSession && claudeStatus !== undefined && (
-        <div className="flex items-center gap-2">
-          {claudeStatus.model !== undefined && (
-            <span className="font-mono text-[9px] text-phase-plan">{claudeStatus.model}</span>
-          )}
-          {claudeStatus.contextPercent !== undefined && (
-            <ContextGauge percent={claudeStatus.contextPercent} />
-          )}
-          {claudeStatus.tokens !== undefined && (
-            <span className="font-mono text-[9px] text-text-ghost">
-              {claudeStatus.tokens.toLocaleString()}tk
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Controls */}
-      <button
-        title="Split"
-        tabIndex={-1}
-        className="cursor-default px-0.5 text-[11px] text-text-ghost transition-colors hover:text-text-secondary"
-        onClick={(e) => e.preventDefault()}
-      >
-        ⊞
-      </button>
-      {onKill !== undefined && (
-        <button
-          title="Kill session"
-          tabIndex={-1}
-          className="cursor-default px-0.5 text-[11px] text-text-ghost transition-colors hover:text-sem-danger"
-          onClick={(e) => {
-            e.stopPropagation();
-            onKill();
+    <div
+      className="relative flex h-9 shrink-0 items-center overflow-hidden border-b border-border-subtle bg-bg-void"
+    >
+      {/* Context ambient fill — grows behind the whole bar as Claude fills context */}
+      {isClaudeSession && ctxPct !== undefined && ctxPct > 0 && (
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 transition-all duration-1000"
+          style={{
+            width: `${ctxPct}%`,
+            background: ctxPct > 80
+              ? 'linear-gradient(to left, rgba(248,81,73,0.07), transparent)'
+              : ctxPct > 50
+                ? 'linear-gradient(to left, rgba(210,153,34,0.07), transparent)'
+                : 'linear-gradient(to left, rgba(127,119,221,0.09), transparent)',
           }}
-        >
-          ×
-        </button>
+        />
       )}
+
+      {/* Left accent strip — session type color */}
+      <div
+        className="absolute left-0 top-0 h-full w-[2px]"
+        style={{
+          background: cfg.accent,
+          opacity: session.status === 'running' ? 0.9 : 0.3,
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 flex w-full items-center gap-2 px-3 pl-4">
+        {/* Status dot */}
+        <div className={`h-[5px] w-[5px] shrink-0 rounded-full ${dotClass}`} />
+
+        {/* Label */}
+        <span className="font-mono text-[10px] text-text-secondary">{session.label}</span>
+
+        {/* Path */}
+        {worktreeDisplay !== null && (
+          <span className="max-w-[160px] truncate font-mono text-[10px] text-text-ghost">
+            · {worktreeDisplay}
+          </span>
+        )}
+
+        <div className="flex-1" />
+
+        {/* ── Claude telemetry ── */}
+        {isClaudeSession && claudeStatus !== undefined && (
+          <div className="flex items-center gap-2.5">
+            {/* Model chip */}
+            {claudeStatus.model !== undefined && (
+              <span
+                className="shrink-0 rounded-[3px] px-1.5 py-px font-mono text-[8px] font-semibold uppercase tracking-wider"
+                style={{
+                  color: cfg.accent,
+                  background: cfg.accentDim,
+                  border: `1px solid ${cfg.accent}30`,
+                }}
+              >
+                {claudeStatus.model.replace(/^claude-/, '').replace(/-\d+.*$/, '')}
+              </span>
+            )}
+
+            {/* Context bar + percent */}
+            {ctxPct !== undefined && (
+              <div className="flex items-center gap-1.5">
+                <div
+                  className="h-[3px] w-14 overflow-hidden rounded-full"
+                  style={{ background: 'var(--bg-active, #1e1e2e)' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${ctxPct}%`, background: ctxFillColor }}
+                  />
+                </div>
+                <span
+                  className="w-6 text-right font-mono text-[9px] tabular-nums"
+                  style={{ color: ctxFillColor, opacity: 0.9 }}
+                >
+                  {ctxPct}%
+                </span>
+              </div>
+            )}
+
+            {/* Token counter */}
+            {claudeStatus.tokens !== undefined && (
+              <span className="font-mono text-[9px] tabular-nums text-text-ghost">
+                {formatTokens(claudeStatus.tokens)}
+                <span className="opacity-40">tk</span>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* ── Copilot badge ── */}
+        {isCopilot && (
+          <span
+            className="shrink-0 rounded-[3px] px-1.5 py-px font-mono text-[8px] font-semibold uppercase tracking-wider"
+            style={{
+              color: '#38bdf8',
+              background: 'rgba(56,189,248,0.12)',
+              border: '1px solid rgba(56,189,248,0.25)',
+            }}
+          >
+            copilot
+          </span>
+        )}
+
+        {/* Kill */}
+        {onKill !== undefined && (
+          <button
+            title="Kill session"
+            tabIndex={-1}
+            className="ml-1 cursor-default font-mono text-[13px] leading-none text-text-ghost transition-colors hover:text-[var(--color-danger)]"
+            onClick={(e) => { e.stopPropagation(); onKill(); }}
+          >
+            ×
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -233,6 +288,16 @@ export const TerminalTab = ({
       api?.write(sessionId, data);
     });
 
+    // Right-click: copy selection before xterm clears it, suppress native menu
+    const handleContextMenu = (e: MouseEvent): void => {
+      const selection = term.getSelection();
+      if (selection) {
+        e.preventDefault();
+        void navigator.clipboard.writeText(selection);
+      }
+    };
+    container.addEventListener('contextmenu', handleContextMenu);
+
     // Sync terminal dimensions on resize
     const resizeObserver = new ResizeObserver(() => {
       if (container.offsetWidth === 0 || container.offsetHeight === 0) return;
@@ -248,6 +313,7 @@ export const TerminalTab = ({
     forceUpdate((n) => n + 1);
 
     return () => {
+      container.removeEventListener('contextmenu', handleContextMenu);
       resizeObserver.disconnect();
       onDataDisposable.dispose();
       cleanupData?.();

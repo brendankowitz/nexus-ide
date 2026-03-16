@@ -64,6 +64,7 @@ const CommitError = ({ message }: { message: string }): React.JSX.Element => (
 
 export const CommitLog = (): React.JSX.Element => {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export const CommitLog = (): React.JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const result = await window.nexusAPI.git.log(activeProjectId);
+      const result = await window.nexusAPI.git.log(activeProjectId, undefined, activeWorktreePath ?? undefined);
       setCommits(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -86,7 +87,7 @@ export const CommitLog = (): React.JSX.Element => {
     } finally {
       setLoading(false);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, activeWorktreePath]);
 
   useEffect(() => {
     void loadCommits();
@@ -106,7 +107,7 @@ export const CommitLog = (): React.JSX.Element => {
 
   return (
     <>
-      <div className="py-2">
+      <div className="h-full overflow-y-auto py-2">
         <div className="flex">
           {/* Graph column */}
           <GitGraph commits={commits} />

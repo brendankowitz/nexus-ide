@@ -48,10 +48,9 @@
 
   /* Dimensions */
   --rail-width: 220px;
+  --sc-panel-width: 380px;
   --titlebar-height: 36px;
   --tab-height: 38px;
-  --agent-panel-collapsed: 42px;
-  --agent-panel-expanded: 260px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;

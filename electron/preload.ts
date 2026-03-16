@@ -55,6 +55,7 @@ const CH = {
   GIT_WORKTREE_CREATE: 'git:worktree-create',
   GIT_WORKTREE_REMOVE: 'git:worktree-remove',
   GIT_CHECKOUT: 'git:checkout',
+  GIT_BRANCH_CREATE: 'git:branch-create',
   GIT_DIFF: 'git:diff',
   GIT_DIFF_HUNKS: 'git:diff-hunks',
   GIT_COMMIT_DIFF: 'git:commit-diff',
@@ -133,11 +134,11 @@ const nexusAPIImpl = {
   /* ── Git ───────────────────────────────────────────────────────────────── */
 
   git: {
-    status(projectId: string): Promise<GitStatus> {
-      return ipcRenderer.invoke(CH.GIT_STATUS, projectId) as Promise<GitStatus>;
+    status(projectId: string, worktreePath?: string): Promise<GitStatus> {
+      return ipcRenderer.invoke(CH.GIT_STATUS, projectId, worktreePath) as Promise<GitStatus>;
     },
-    branches(projectId: string): Promise<Branch[]> {
-      return ipcRenderer.invoke(CH.GIT_BRANCHES, projectId) as Promise<Branch[]>;
+    branches(projectId: string, worktreePath?: string): Promise<Branch[]> {
+      return ipcRenderer.invoke(CH.GIT_BRANCHES, projectId, worktreePath) as Promise<Branch[]>;
     },
     worktrees(projectId: string): Promise<Worktree[]> {
       return ipcRenderer.invoke(CH.GIT_WORKTREES, projectId) as Promise<Worktree[]>;
@@ -151,11 +152,14 @@ const nexusAPIImpl = {
     checkout(projectId: string, branch: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_CHECKOUT, projectId, branch) as Promise<void>;
     },
-    diff(projectId: string): Promise<DiffFile[]> {
-      return ipcRenderer.invoke(CH.GIT_DIFF, projectId) as Promise<DiffFile[]>;
+    createBranch(projectId: string, branchName: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_BRANCH_CREATE, projectId, branchName) as Promise<void>;
     },
-    diffHunks(projectId: string, filePath: string): Promise<DiffHunk[]> {
-      return ipcRenderer.invoke(CH.GIT_DIFF_HUNKS, projectId, filePath) as Promise<DiffHunk[]>;
+    diff(projectId: string, worktreePath?: string): Promise<DiffFile[]> {
+      return ipcRenderer.invoke(CH.GIT_DIFF, projectId, worktreePath) as Promise<DiffFile[]>;
+    },
+    diffHunks(projectId: string, filePath: string, worktreePath?: string): Promise<DiffHunk[]> {
+      return ipcRenderer.invoke(CH.GIT_DIFF_HUNKS, projectId, filePath, worktreePath) as Promise<DiffHunk[]>;
     },
     commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]> {
       return ipcRenderer.invoke(CH.GIT_COMMIT_DIFF, projectId, commitHash) as Promise<DiffFile[]>;
@@ -163,20 +167,20 @@ const nexusAPIImpl = {
     commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]> {
       return ipcRenderer.invoke(CH.GIT_COMMIT_FILE_HUNKS, projectId, commitHash, filePath) as Promise<DiffHunk[]>;
     },
-    log(projectId: string, count?: number): Promise<Commit[]> {
-      return ipcRenderer.invoke(CH.GIT_LOG, projectId, count) as Promise<Commit[]>;
+    log(projectId: string, count?: number, worktreePath?: string): Promise<Commit[]> {
+      return ipcRenderer.invoke(CH.GIT_LOG, projectId, count, worktreePath) as Promise<Commit[]>;
     },
-    stage(projectId: string, filePath: string): Promise<void> {
-      return ipcRenderer.invoke(CH.GIT_STAGE, projectId, filePath) as Promise<void>;
+    stage(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_STAGE, projectId, filePath, worktreePath) as Promise<void>;
     },
-    unstage(projectId: string, filePath: string): Promise<void> {
-      return ipcRenderer.invoke(CH.GIT_UNSTAGE, projectId, filePath) as Promise<void>;
+    unstage(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_UNSTAGE, projectId, filePath, worktreePath) as Promise<void>;
     },
-    stageAll(projectId: string): Promise<void> {
-      return ipcRenderer.invoke(CH.GIT_STAGE_ALL, projectId) as Promise<void>;
+    stageAll(projectId: string, worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_STAGE_ALL, projectId, worktreePath) as Promise<void>;
     },
-    commit(projectId: string, message: string): Promise<string> {
-      return ipcRenderer.invoke(CH.GIT_COMMIT, projectId, message) as Promise<string>;
+    commit(projectId: string, message: string, worktreePath?: string): Promise<string> {
+      return ipcRenderer.invoke(CH.GIT_COMMIT, projectId, message, worktreePath) as Promise<string>;
     },
   },
 

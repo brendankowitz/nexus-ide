@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { useProjectStore } from '@/stores/projectStore';
+import { useProjectStore, selectActiveWorktrees } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useGit } from '@/hooks/useGit';
 import { useToastStore } from '@/stores/toastStore';
-import type { Branch } from '@/types';
+import type { Branch, Worktree } from '@/types';
 
 // ── Types ─────────────────────────────────────────
 
@@ -102,10 +102,37 @@ const BranchLoading = (): React.JSX.Element => (
 // ── Components ────────────────────────────────────
 
 export const BranchList = (): React.JSX.Element => {
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const branches = useProjectStore((s) =>
     s.activeProjectId !== null ? (s.branches[s.activeProjectId] ?? undefined) : undefined,
   );
+  const worktrees = useProjectStore(selectActiveWorktrees);
   const { loading, refresh } = useGit();
+  const [showWorktreeBranches, setShowWorktreeBranches] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const handleCreate = useCallback(async (): Promise<void> => {
+    const name = newBranchName.trim();
+    if (!name || activeProjectId === null) return;
+    if (!window.nexusAPI?.git) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await window.nexusAPI.git.createBranch(activeProjectId, name);
+      await refresh();
+      setNewBranchName('');
+      setShowForm(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to create branch';
+      setCreateError(msg);
+      useToastStore.getState().addToast(`Branch: ${msg}`, 'error');
+    } finally {
+      setCreating(false);
+    }
+  }, [activeProjectId, newBranchName, refresh]);
 
   // Loading: no data yet and actively loading
   if (branches === undefined && loading) {
@@ -117,10 +144,86 @@ export const BranchList = (): React.JSX.Element => {
     return <BranchEmptyState />;
   }
 
-  const { topLevel, groups } = groupBranches(branches);
-  const headPrefix = findHeadPrefix(branches);
+  const inWorktree = (b: Branch): boolean =>
+    worktrees.some(
+      (wt) => !wt.isMainWorktree && (wt.branch === b.name || wt.branch === 'refs/heads/' + b.name),
+    );
 
-  return <BranchListInner topLevel={topLevel} groups={groups} headPrefix={headPrefix} refresh={refresh} />;
+  const visibleBranches = showWorktreeBranches ? branches : branches.filter((b) => !inWorktree(b));
+  const hiddenCount = branches.length - visibleBranches.length;
+
+  const { topLevel, groups } = groupBranches(visibleBranches);
+  const headPrefix = findHeadPrefix(visibleBranches);
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2">
+        <span className="font-mono text-[11px] text-text-secondary">
+          {visibleBranches.length} branch{visibleBranches.length !== 1 ? 'es' : ''}
+        </span>
+        <button
+          onClick={() => { setShowForm((v) => !v); setCreateError(null); }}
+          className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-plan px-2 py-0.5 font-mono text-[10px] text-phase-plan transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-plan-glow)]"
+        >
+          + new
+        </button>
+      </div>
+
+      {/* Inline create form */}
+      {showForm && (
+        <div className="flex flex-col gap-1.5 border-b border-border-subtle bg-bg-raised px-4 py-2">
+          <input
+            type="text"
+            value={newBranchName}
+            onChange={(e) => { setNewBranchName(e.target.value); setCreateError(null); }}
+            placeholder="branch name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreate();
+              if (e.key === 'Escape') { setShowForm(false); setNewBranchName(''); setCreateError(null); }
+            }}
+            className="w-full rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2 py-1 font-mono text-[11px] text-text-primary outline-none focus:border-phase-plan"
+          />
+          {createError !== null && (
+            <p className="font-mono text-[10px] text-[var(--color-danger)]">{createError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => void handleCreate()}
+              disabled={creating || !newBranchName.trim()}
+              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-plan px-2 py-1 font-mono text-[10px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {creating ? 'creating…' : 'create'}
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setNewBranchName(''); setCreateError(null); }}
+              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[10px] text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:text-text-secondary"
+            >
+              cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Branch list */}
+      <div className="flex-1 overflow-y-auto">
+        <BranchListInner topLevel={topLevel} groups={groups} headPrefix={headPrefix} refresh={refresh} />
+        {hiddenCount > 0 && (
+          <div className="border-t border-border-subtle px-5 py-2">
+            <button
+              onClick={() => { setShowWorktreeBranches((v) => !v); }}
+              className="cursor-pointer font-mono text-[11px] text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:text-text-secondary"
+            >
+              {showWorktreeBranches
+                ? 'hide worktree branches'
+                : `${hiddenCount} in worktrees — show`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 // Extracted inner to avoid re-computing collapsed state on every render
@@ -138,6 +241,7 @@ const BranchListInner = ({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() =>
     initCollapsedState(groups, headPrefix),
   );
+  const worktrees = useProjectStore(selectActiveWorktrees);
 
   const toggleGroup = (prefix: string): void => {
     setCollapsed((prev) => ({ ...prev, [prefix]: !prev[prefix] }));
@@ -146,7 +250,7 @@ const BranchListInner = ({
   return (
     <div className="py-2">
       {topLevel.map((branch) => (
-        <BranchRow key={branch.name} branch={branch} refresh={refresh} />
+        <BranchRow key={branch.name} branch={branch} refresh={refresh} worktrees={worktrees} />
       ))}
       {groups.map((group) => (
         <div key={group.prefix}>
@@ -158,7 +262,7 @@ const BranchListInner = ({
           />
           {!collapsed[group.prefix] &&
             group.branches.map((branch) => (
-              <BranchRow key={branch.name} branch={branch} indented refresh={refresh} />
+              <BranchRow key={branch.name} branch={branch} indented refresh={refresh} worktrees={worktrees} />
             ))}
         </div>
       ))}
@@ -204,9 +308,10 @@ interface BranchRowProps {
   branch: Branch;
   indented?: boolean;
   refresh: () => Promise<void>;
+  worktrees: Worktree[];
 }
 
-const BranchRow = ({ branch, indented = false, refresh }: BranchRowProps): React.JSX.Element => {
+const BranchRow = ({ branch, indented = false, refresh, worktrees }: BranchRowProps): React.JSX.Element => {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
   const [error, setError] = useState<string | null>(null);
@@ -254,6 +359,10 @@ const BranchRow = ({ branch, indented = false, refresh }: BranchRowProps): React
     setActiveTab('diffs');
   }, [setActiveTab]);
 
+  const hasWorktree = worktrees.some(
+    (wt) => !wt.isMainWorktree && (wt.branch === branch.name || wt.branch === 'refs/heads/' + branch.name),
+  );
+
   const indicatorType = branch.isHead
     ? 'head'
     : branch.name === 'main' || branch.name === 'develop'
@@ -294,6 +403,21 @@ const BranchRow = ({ branch, indented = false, refresh }: BranchRowProps): React
         {branch.isHead && (
           <span className="rounded-[3px] border border-[var(--phase-plan-dim)] bg-[var(--phase-plan-glow)] px-1.5 py-px text-[10px] font-semibold tracking-[1px] text-phase-plan">
             HEAD
+          </span>
+        )}
+
+        {/* Worktree badge — shown when this branch has an active worktree checkout */}
+        {hasWorktree && !branch.isHead && (
+          <span
+            className="shrink-0 rounded-[2px] px-[5px] py-px font-mono text-[9px] font-semibold"
+            style={{
+              color: 'var(--phase-execute)',
+              background: 'var(--phase-execute-glow)',
+              border: '1px solid var(--phase-execute-dim)',
+            }}
+            title="Active worktree checkout"
+          >
+            ⊞ wt
           </span>
         )}
 

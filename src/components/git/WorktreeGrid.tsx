@@ -1,502 +1,259 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useProjectStore } from '@/stores/projectStore';
+import { useState } from 'react';
+import { useProjectStore, selectActiveProject, selectActiveWorktrees } from '@/stores/projectStore';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { useUIStore } from '@/stores/uiStore';
-import { usePipelineStore } from '@/stores/pipelineStore';
 import { useGit } from '@/hooks/useGit';
-import type { Worktree, TerminalSession, NexusPlugin, PipelineConfig } from '@/types';
-
-// ── Empty State ──────────────────────────────────
-
-const WorktreeEmptyState = (): React.JSX.Element => (
-  <div className="flex h-full flex-col items-center justify-center gap-4 px-8">
-    <div className="relative">
-      <div
-        className="absolute inset-0 rounded-2xl opacity-30 blur-2xl"
-        style={{ background: 'var(--phase-execute)' }}
-      />
-      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border-default bg-bg-surface">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-text-tertiary">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
-    </div>
-    <div className="text-center">
-      <p className="font-mono text-[13px] font-medium text-text-primary">No worktrees</p>
-      <p className="mt-1 text-[11px] text-text-tertiary">Create a worktree to work on multiple branches simultaneously</p>
-    </div>
-  </div>
-);
-
-// ── Loading State ────────────────────────────────
-
-const WorktreeLoading = (): React.JSX.Element => (
-  <div className="flex h-full items-center justify-center">
-    <div className="flex items-center gap-2.5">
-      <div className="h-3 w-3 animate-spin rounded-full border border-text-ghost border-t-phase-execute" />
-      <span className="font-mono text-[11px] text-text-tertiary">Loading worktrees...</span>
-    </div>
-  </div>
-);
-
-// ── WorktreeGrid ───────────────────────────────────
+import { useToastStore } from '@/stores/toastStore';
 
 export const WorktreeGrid = (): React.JSX.Element => {
-  const worktrees = useProjectStore((s) =>
-    s.activeProjectId !== null ? (s.worktrees[s.activeProjectId] ?? undefined) : undefined,
-  );
-  const { loading, refresh } = useGit();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const activeProject = useProjectStore(selectActiveProject);
+  const worktrees = useProjectStore(selectActiveWorktrees);
+  const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
+  const setActiveWorktreePath = useProjectStore((s) => s.setActiveWorktreePath);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const sessions = useTerminalStore((s) => s.sessions);
+  const { refresh } = useGit();
 
-  // Loading: no data yet and actively loading
-  if (worktrees === undefined && loading) {
-    return <WorktreeLoading />;
-  }
+  const [showForm, setShowForm] = useState(false);
+  const [branch, setBranch] = useState('');
+  const [path, setPath] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  // Empty: data loaded but no worktrees -- still show add card
-  if (worktrees === undefined || worktrees.length === 0) {
+  const handleCreate = async () => {
+    if (!activeProject || !branch.trim()) return;
+    setCreating(true);
+    try {
+      await window.nexusAPI.git.createWorktree(
+        activeProject.id,
+        branch.trim(),
+        path.trim() || undefined,
+      );
+      await refresh();
+      setBranch('');
+      setPath('');
+      setShowForm(false);
+    } catch (err) {
+      useToastStore.getState().addToast(
+        `Create worktree failed: ${err instanceof Error ? err.message : String(err)}`,
+        'error',
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRemove = async (worktreePath: string) => {
+    if (!activeProject) return;
+    try {
+      await window.nexusAPI.git.removeWorktree(activeProject.id, worktreePath);
+      if (activeWorktreePath === worktreePath) {
+        setActiveWorktreePath(null);
+      }
+      await refresh();
+    } catch (err) {
+      useToastStore.getState().addToast(
+        `Remove worktree failed: ${err instanceof Error ? err.message : String(err)}`,
+        'error',
+      );
+    }
+  };
+
+  if (!activeProject) {
     return (
-      <div className="flex h-full flex-col">
-        <div className="flex-1">
-          <WorktreeEmptyState />
-        </div>
-        <div className="p-4 px-5">
-          {showAddForm ? (
-            <AddWorktreeForm onClose={() => { setShowAddForm(false); }} refresh={refresh} />
-          ) : (
-            <AddWorktreeCard onClick={() => { setShowAddForm(true); }} />
-          )}
-        </div>
+      <div className="flex h-full items-center justify-center">
+        <span className="font-mono text-[11px] text-text-ghost">No project selected</span>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3 p-4 px-5">
-      {worktrees.map((wt) => (
-        <WorktreeCard key={wt.path} worktree={wt} refresh={refresh} />
-      ))}
-      {showAddForm ? (
-        <AddWorktreeForm onClose={() => { setShowAddForm(false); }} refresh={refresh} />
-      ) : (
-        <AddWorktreeCard onClick={() => { setShowAddForm(true); }} />
-      )}
-    </div>
-  );
-};
-
-// ── WorktreeCard ───────────────────────────────────
-
-interface WorktreeCardProps {
-  worktree: Worktree;
-  refresh: () => Promise<void>;
-}
-
-const WorktreeCard = ({ worktree, refresh }: WorktreeCardProps): React.JSX.Element => {
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const addSession = useTerminalStore((s) => s.addSession);
-  const setActiveSession = useTerminalStore((s) => s.setActiveSession);
-  const toggleAgentPanel = useUIStore((s) => s.toggleAgentPanel);
-  const agentPanelExpanded = useUIStore((s) => s.agentPanelExpanded);
-
-  const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showValidateConfig, setShowValidateConfig] = useState(false);
-
-  const showError = useCallback((msg: string): void => {
-    setError(msg);
-    setTimeout(() => { setError(null); }, 3000);
-  }, []);
-
-  const expandAgentPanel = useCallback((): void => {
-    if (!agentPanelExpanded) {
-      toggleAgentPanel();
-    }
-  }, [agentPanelExpanded, toggleAgentPanel]);
-
-  const buildSession = useCallback((sessionId: string, label: string): TerminalSession => ({
-    id: sessionId,
-    projectId: activeProjectId ?? '',
-    projectName: worktree.branch,
-    agentType: 'shell',
-    label,
-    status: 'running',
-    worktreePath: worktree.path,
-    branch: worktree.branch,
-    startedAt: new Date().toISOString(),
-  }), [activeProjectId, worktree.branch, worktree.path]);
-
-  const handleTerminal = useCallback(async (): Promise<void> => {
-    if (activeProjectId === null) return;
-    if (!window.nexusAPI?.terminal) return;
-    try {
-      const label = `Shell - ${worktree.branch}`;
-      const sessionId = await window.nexusAPI.terminal.create({
-        projectId: activeProjectId,
-        worktreePath: worktree.path,
-        label,
-      });
-      addSession(buildSession(sessionId, label));
-      setActiveSession(sessionId);
-      expandAgentPanel();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to open terminal');
-    }
-  }, [activeProjectId, worktree, addSession, setActiveSession, expandAgentPanel, buildSession, showError]);
-
-  const handleAgent = useCallback(async (): Promise<void> => {
-    if (activeProjectId === null) return;
-    if (!window.nexusAPI?.terminal) return;
-    try {
-      const label = `Claude Code - ${worktree.branch}`;
-      const sessionId = await window.nexusAPI.terminal.create({
-        projectId: activeProjectId,
-        worktreePath: worktree.path,
-        command: 'claude',
-        label,
-      });
-      addSession({ ...buildSession(sessionId, label), agentType: 'claude' });
-      setActiveSession(sessionId);
-      expandAgentPanel();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to open agent');
-    }
-  }, [activeProjectId, worktree, addSession, setActiveSession, expandAgentPanel, buildSession, showError]);
-
-  const handleEditor = useCallback(async (): Promise<void> => {
-    if (activeProjectId === null) return;
-    if (!window.nexusAPI?.terminal) return;
-    try {
-      // Uses 'code' as default editor; configurable in Settings > General > Editor
-      const label = `Editor - ${worktree.branch}`;
-      const sessionId = await window.nexusAPI.terminal.create({
-        projectId: activeProjectId,
-        worktreePath: worktree.path,
-        command: 'code',
-        args: [worktree.path],
-        label,
-      });
-      addSession(buildSession(sessionId, label));
-      setActiveSession(sessionId);
-      expandAgentPanel();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to open editor');
-    }
-  }, [activeProjectId, worktree, addSession, setActiveSession, expandAgentPanel, buildSession, showError]);
-
-  const handleDelete = useCallback(async (): Promise<void> => {
-    if (activeProjectId === null) return;
-    if (!window.nexusAPI?.git) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      setTimeout(() => { setConfirmDelete(false); }, 4000);
-      return;
-    }
-    try {
-      await window.nexusAPI.git.removeWorktree(activeProjectId, worktree.path);
-      await refresh();
-    } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to remove worktree');
-    } finally {
-      setConfirmDelete(false);
-    }
-  }, [activeProjectId, worktree.path, confirmDelete, refresh, showError]);
-
-  return (
-    <div className="flex cursor-default flex-col gap-2.5 rounded-[var(--radius-lg)] border border-border-default bg-bg-surface p-3.5 px-4 transition-all duration-[150ms] ease-[var(--ease-out)] hover:-translate-y-px hover:border-border-strong hover:bg-bg-overlay hover:shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <div className="font-mono text-[12px] font-medium text-text-primary">
-            {worktree.branch}
-          </div>
-          <div className="mt-0.5 truncate font-mono text-[10px] text-text-tertiary">
-            {worktree.path}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className={`mt-[3px] h-2 w-2 shrink-0 rounded-full ${
-              worktree.isDirty ? 'bg-[var(--color-modified)]' : 'bg-[var(--color-clean)]'
-            }`}
-          />
-          {/* Delete button */}
-          <button
-            onClick={() => { void handleDelete(); }}
-            title={confirmDelete ? 'Click again to confirm' : 'Remove worktree'}
-            className={`rounded px-1 py-0.5 font-mono text-[10px] transition-all duration-[var(--duration-fast)] ${
-              confirmDelete
-                ? 'bg-[var(--color-deleted)] text-white'
-                : 'text-text-ghost hover:text-[var(--color-deleted)]'
-            }`}
-          >
-            {confirmDelete ? 'confirm?' : '\u00d7'}
-          </button>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-1.5">
-        <WtButton label="terminal" onClick={() => { void handleTerminal(); }} />
-        <WtButton label="agent" primary onClick={() => { void handleAgent(); }} />
-        <WtButton label="editor" onClick={() => { void handleEditor(); }} />
-        <WtButton label="validate" onClick={() => { setShowValidateConfig((v) => !v); }} />
-      </div>
-
-      {/* Inline validate config */}
-      {showValidateConfig && activeProjectId !== null && (
-        <WorktreeValidateConfig
-          projectId={activeProjectId}
-          worktree={worktree}
-          onClose={() => { setShowValidateConfig(false); }}
-        />
-      )}
-
-      {/* Inline error */}
-      {error !== null && (
-        <span className="text-[10px] text-[var(--color-deleted)]">{error}</span>
-      )}
-    </div>
-  );
-};
-
-// ── WorktreeValidateConfig ──────────────────────────
-
-interface WorktreeValidateConfigProps {
-  projectId: string;
-  worktree: Worktree;
-  onClose: () => void;
-}
-
-const WorktreeValidateConfig = ({
-  projectId,
-  worktree,
-  onClose,
-}: WorktreeValidateConfigProps): React.JSX.Element => {
-  const addRun = usePipelineStore((s) => s.addRun);
-  const setActiveRun = usePipelineStore((s) => s.setActiveRun);
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
-
-  const [executePlugins, setExecutePlugins] = useState<NexusPlugin[]>([]);
-  const [validatePlugins, setValidatePlugins] = useState<NexusPlugin[]>([]);
-  const [planPlugins, setPlanPlugins] = useState<NexusPlugin[]>([]);
-  const [executePluginId, setExecutePluginId] = useState('');
-  const [validateChain, setValidateChain] = useState<Array<{ pluginId: string }>>([]);
-
-  useEffect(() => {
-    if (!window.nexusAPI?.plugins) return;
-    void window.nexusAPI.plugins.list('execute').then((plugins) => {
-      setExecutePlugins(plugins);
-      if (plugins.length > 0) setExecutePluginId(plugins[0].id);
-    });
-    void window.nexusAPI.plugins.list('validate').then(setValidatePlugins);
-    void window.nexusAPI.plugins.list('plan').then(setPlanPlugins);
-  }, []);
-
-  const handleRun = useCallback(async (): Promise<void> => {
-    if (!window.nexusAPI?.pipeline) return;
-    const config: PipelineConfig = {
-      name: `Validate ${worktree.branch} ${new Date().toLocaleTimeString()}`,
-      projectId,
-      branch: worktree.branch,
-      worktreePath: worktree.path,
-      plan: { pluginId: planPlugins[0]?.id ?? 'noop' },
-      execute: { pluginId: executePluginId },
-      validate: { chain: validateChain },
-    };
-    try {
-      const run = await window.nexusAPI.pipeline.create(projectId, config);
-      addRun(run);
-      setActiveRun(run.id);
-      setActiveTab('pipeline');
-      await window.nexusAPI.pipeline.start(run.id, 'plan');
-      onClose();
-    } catch (err) {
-      console.error('[WorktreeValidateConfig] run failed:', err);
-    }
-  }, [projectId, worktree, planPlugins, executePluginId, validateChain, addRun, setActiveRun, setActiveTab, onClose]);
-
-  return (
-    <div className="flex flex-col gap-2 border-t border-border-subtle pt-2">
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-[10px] text-text-tertiary">Execute Agent:</span>
-        <select
-          value={executePluginId}
-          onChange={(e) => setExecutePluginId(e.target.value)}
-          className="flex-1 rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1.5 py-[3px] font-mono text-[10px] text-text-primary outline-none focus:border-border-strong"
+      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2">
+        <span className="font-mono text-[11px] text-text-secondary">
+          {worktrees.length} worktree{worktrees.length !== 1 ? 's' : ''}
+        </span>
+        <button
+          onClick={() => setShowForm((prev) => !prev)}
+          className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-execute px-2 py-0.5 font-mono text-[10px] text-phase-execute transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-execute-glow)]"
         >
-          {executePlugins.length === 0 && <option value="">loading...</option>}
-          {executePlugins.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+          + new
+        </button>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="font-mono text-[10px] text-text-tertiary">Validate:</span>
-        {validateChain.map((step, i) => {
-          const plugin = validatePlugins.find((p) => p.id === step.pluginId);
-          return (
-            <span
-              key={`${step.pluginId}-${i}`}
-              className="flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1 py-[1px] font-mono text-[9px] text-text-secondary"
-            >
-              {plugin?.name ?? step.pluginId}
-              <button
-                onClick={() => setValidateChain((c) => c.filter((_, idx) => idx !== i))}
-                className="cursor-pointer text-text-ghost hover:text-[var(--color-deleted)]"
-              >
-                &times;
-              </button>
-            </span>
-          );
-        })}
-        {validatePlugins.length > 0 && (
-          <select
-            value=""
-            onChange={(e) => {
-              if (e.target.value) {
-                setValidateChain((c) => [...c, { pluginId: e.target.value }]);
-              }
+
+      {/* Inline create form */}
+      {showForm && (
+        <div className="flex flex-col gap-1.5 border-b border-border-subtle bg-bg-raised px-4 py-2">
+          <input
+            type="text"
+            value={branch}
+            onChange={(e) => setBranch(e.target.value)}
+            placeholder="branch name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreate();
+              if (e.key === 'Escape') { setShowForm(false); setBranch(''); setPath(''); }
             }}
-            className="rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-1 py-[1px] font-mono text-[9px] text-text-ghost outline-none focus:border-border-strong"
-          >
-            <option value="">+ add step</option>
-            {validatePlugins.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        )}
-      </div>
-      <div className="flex gap-1.5">
-        <button
-          onClick={() => { void handleRun(); }}
-          className="flex-1 cursor-pointer rounded-[var(--radius-sm)] border border-[var(--phase-execute-dim)] bg-[var(--phase-execute-dim)] py-[4px] text-center font-mono text-[10px] font-medium text-phase-execute transition-all duration-[var(--duration-fast)] hover:bg-phase-execute hover:text-[var(--bg-void)]"
-        >
-          Run Validation
-        </button>
-        <button
-          onClick={onClose}
-          className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default bg-bg-raised px-2 py-[4px] font-mono text-[10px] text-text-secondary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:bg-bg-active hover:text-text-primary"
-        >
-          &times;
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ── WtButton ───────────────────────────────────────
-
-interface WtButtonProps {
-  label: string;
-  primary?: boolean;
-  onClick: () => void;
-}
-
-const WtButton = ({
-  label,
-  primary = false,
-  onClick,
-}: WtButtonProps): React.JSX.Element => (
-  <button
-    onClick={onClick}
-    className={`flex-1 cursor-pointer rounded-[var(--radius-sm)] border py-[5px] text-center font-mono text-[10px] font-medium transition-all duration-[var(--duration-fast)] ${
-      primary
-        ? 'border-[var(--phase-execute-dim)] bg-[var(--phase-execute-dim)] text-phase-execute hover:bg-phase-execute hover:text-[var(--bg-void)]'
-        : 'border-border-default bg-bg-raised text-text-secondary hover:border-border-strong hover:bg-bg-active hover:text-text-primary'
-    }`}
-  >
-    {label}
-  </button>
-);
-
-// ── AddWorktreeCard ────────────────────────────────
-
-const AddWorktreeCard = ({ onClick }: { onClick: () => void }): React.JSX.Element => (
-  <div
-    role="button"
-    tabIndex={0}
-    onClick={onClick}
-    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-    className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-dashed border-border-strong bg-transparent text-text-tertiary transition-all duration-[150ms] ease-[var(--ease-out)] hover:border-text-tertiary hover:bg-bg-surface hover:text-text-secondary"
-  >
-    <span className="text-[20px] font-light leading-none">+</span>
-    <span className="font-mono text-[10px] tracking-[0.5px]">new worktree</span>
-  </div>
-);
-
-// ── AddWorktreeForm ────────────────────────────────
-
-interface AddWorktreeFormProps {
-  onClose: () => void;
-  refresh: () => Promise<void>;
-}
-
-const AddWorktreeForm = ({ onClose, refresh }: AddWorktreeFormProps): React.JSX.Element => {
-  const activeProjectId = useProjectStore((s) => s.activeProjectId);
-  const [branch, setBranch] = useState('');
-  const [path, setPath] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = useCallback(async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (activeProjectId === null || branch.trim() === '') return;
-    if (!window.nexusAPI?.git) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await window.nexusAPI.git.createWorktree(
-        activeProjectId,
-        branch.trim(),
-        path.trim() !== '' ? path.trim() : undefined,
-      );
-      await refresh();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create worktree');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeProjectId, branch, path, refresh, onClose]);
-
-  return (
-    <div className="flex min-h-[120px] flex-col gap-2 rounded-[var(--radius-lg)] border border-border-strong bg-bg-surface p-3.5 px-4">
-      <span className="font-mono text-[11px] font-medium text-text-secondary">new worktree</span>
-      <form onSubmit={(e) => { void handleSubmit(e); }} className="flex flex-col gap-1.5">
-        <input
-          autoFocus
-          placeholder="branch name"
-          value={branch}
-          onChange={(e) => { setBranch(e.target.value); }}
-          className="rounded-[var(--radius-sm)] border border-border-strong bg-bg-raised px-2 py-1 font-mono text-[11px] text-text-primary placeholder:text-text-ghost focus:outline-none focus:ring-1 focus:ring-border-strong"
-        />
-        <input
-          placeholder="path (optional)"
-          value={path}
-          onChange={(e) => { setPath(e.target.value); }}
-          className="rounded-[var(--radius-sm)] border border-border-strong bg-bg-raised px-2 py-1 font-mono text-[11px] text-text-primary placeholder:text-text-ghost focus:outline-none focus:ring-1 focus:ring-border-strong"
-        />
-        {error !== null && (
-          <span className="text-[10px] text-[var(--color-deleted)]">{error}</span>
-        )}
-        <div className="flex gap-1.5">
-          <button
-            type="submit"
-            disabled={loading || branch.trim() === ''}
-            className="flex-1 cursor-pointer rounded-[var(--radius-sm)] border border-border-strong bg-bg-active py-[5px] font-mono text-[10px] font-medium text-text-primary transition-all duration-[var(--duration-fast)] hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {loading ? '...' : 'create'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong bg-transparent px-3 py-[5px] font-mono text-[10px] text-text-secondary transition-all duration-[var(--duration-fast)] hover:bg-bg-hover"
-          >
-            cancel
-          </button>
+            className="w-full rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2 py-1 font-mono text-[11px] text-text-primary outline-none focus:border-phase-execute"
+          />
+          <input
+            type="text"
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
+            placeholder="path (optional)"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreate();
+              if (e.key === 'Escape') { setShowForm(false); setBranch(''); setPath(''); }
+            }}
+            className="w-full rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2 py-1 font-mono text-[11px] text-text-primary outline-none focus:border-phase-execute"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => void handleCreate()}
+              disabled={creating || !branch.trim()}
+              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-execute px-2 py-1 font-mono text-[10px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {creating ? 'creating…' : 'create'}
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setBranch(''); setPath(''); }}
+              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[10px] text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:text-text-secondary"
+            >
+              cancel
+            </button>
+          </div>
         </div>
-      </form>
+      )}
+
+      {/* Workspace cards */}
+      <div className="flex-1 overflow-y-auto p-2.5 flex flex-col gap-1.5">
+        {worktrees.length === 0 ? (
+          <div className="flex h-24 items-center justify-center">
+            <span className="font-mono text-[11px] text-text-ghost">no worktrees</span>
+          </div>
+        ) : (
+          worktrees.map((wt) => {
+            const isActive = wt.path === activeWorktreePath;
+            // Running terminals in this worktree
+            const normPath = wt.path.replace(/\\/g, '/');
+            const runningHere = sessions.filter(
+              (s) => s.worktreePath?.replace(/\\/g, '/') === normPath && s.status === 'running',
+            );
+            const totalHere = sessions.filter(
+              (s) => s.worktreePath?.replace(/\\/g, '/') === normPath,
+            );
+            // Shorten path: last 2 segments
+            const shortPath = wt.path.replace(/\\/g, '/').split('/').slice(-2).join('/');
+            // Strip refs/heads/ prefix if present
+            const branchDisplay = wt.branch.replace(/^refs\/heads\//, '');
+            // Accent color: active=teal, dirty+inactive=amber, clean=subtle
+            const accentColor = isActive
+              ? 'var(--phase-execute)'
+              : wt.isDirty
+              ? 'var(--color-warning)'
+              : 'var(--border-strong)';
+
+            return (
+              <div
+                key={wt.path}
+                onClick={() => { setActiveWorktreePath(wt.path); setActiveTab('diffs'); }}
+                className="group relative cursor-pointer rounded-[var(--radius-md)] border transition-all duration-[var(--duration-fast)] overflow-hidden"
+                style={{
+                  borderColor: isActive ? 'var(--phase-execute)' : 'var(--border-default)',
+                  background: isActive ? 'var(--bg-surface)' : 'var(--bg-raised)',
+                  boxShadow: isActive
+                    ? '0 0 0 1px var(--phase-execute-dim), inset 0 0 16px var(--phase-execute-glow)'
+                    : undefined,
+                }}
+              >
+                {/* Ambient glow fill for active */}
+                {isActive && (
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.04]"
+                    style={{ background: 'var(--phase-execute)' }}
+                  />
+                )}
+
+                {/* Left accent strip */}
+                <div
+                  className="absolute left-0 top-0 h-full w-[2.5px] transition-all duration-[var(--duration-fast)]"
+                  style={{ background: accentColor }}
+                />
+
+                <div className="relative px-3 py-2.5 pl-4">
+                  {/* Row 1: branch name + tags */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="flex-1 truncate font-mono text-[11px] font-medium"
+                      style={{ color: isActive ? 'var(--phase-execute)' : 'var(--text-primary)' }}
+                    >
+                      {branchDisplay}
+                    </span>
+
+                    {/* Main badge */}
+                    {wt.isMainWorktree && (
+                      <span className="shrink-0 rounded-[2px] border border-border-strong px-[5px] py-px font-mono text-[9px] font-semibold uppercase tracking-wider text-text-ghost">
+                        main
+                      </span>
+                    )}
+
+                    {/* Dirty indicator */}
+                    {wt.isDirty && (
+                      <span
+                        className="shrink-0 font-mono text-[9px] font-semibold"
+                        style={{ color: 'var(--color-warning)' }}
+                        title="Uncommitted changes"
+                      >
+                        △
+                      </span>
+                    )}
+
+                    {/* Remove button — non-main only */}
+                    {!wt.isMainWorktree && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); void handleRemove(wt.path); }}
+                        title="Remove worktree"
+                        className="ml-1 shrink-0 cursor-pointer font-mono text-[13px] leading-none text-text-ghost opacity-0 transition-all duration-[var(--duration-fast)] hover:text-[var(--color-danger)] group-hover:opacity-100"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Row 2: path + terminal count */}
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="flex-1 truncate font-mono text-[9px] text-text-ghost">
+                      {shortPath}
+                    </span>
+
+                    {/* Terminal indicators */}
+                    {totalHere.length > 0 && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        {runningHere.length > 0 ? (
+                          <span
+                            className="flex items-center gap-0.5 font-mono text-[9px]"
+                            style={{ color: 'var(--phase-execute)' }}
+                          >
+                            <span
+                              className="inline-block h-[5px] w-[5px] rounded-full animate-pulse"
+                              style={{ background: 'var(--phase-execute)' }}
+                            />
+                            {runningHere.length}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[9px] text-text-ghost">
+                            {totalHere.length} term
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 };

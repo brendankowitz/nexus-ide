@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
-import { usePipelineStore } from '@/stores/pipelineStore';
 import { FullDiffPanel } from '@/components/git/FullDiffPanel';
 import { DiffListView } from '@/components/git/DiffListView';
 import { DiffTreeView } from '@/components/git/DiffTreeView';
 import { DiffGroupsView } from '@/components/git/DiffGroupsView';
-import type { DiffFile, DiffHunk as DiffHunkType, DiffViewMode, NexusPlugin, PipelineConfig } from '@/types';
+import type { DiffFile, DiffHunk as DiffHunkType, DiffViewMode } from '@/types';
 
 // ── SVG Icons for View Mode Toggle ───────────────
 
@@ -113,11 +112,9 @@ const ViewModeToggle = ({ mode, onChange }: ViewModeToggleProps): React.JSX.Elem
 
 export const DiffViewer = (): React.JSX.Element => {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const purgeStaleReviews = useUIStore((s) => s.purgeStaleReviews);
   const reviewedFiles = useUIStore((s) => s.reviewedFiles);
-  const setActiveTab = useUIStore((s) => s.setActiveTab);
-  const addRun = usePipelineStore((s) => s.addRun);
-  const setActiveRun = usePipelineStore((s) => s.setActiveRun);
 
   const [diffFiles, setDiffFiles] = useState<DiffFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,23 +125,15 @@ export const DiffViewer = (): React.JSX.Element => {
   const [viewMode, setViewMode] = useState<DiffViewMode>('list');
   const commitInputRef = useRef<HTMLInputElement>(null);
 
-  // Feature 1: hide reviewed toggle
   const [hideReviewed, setHideReviewed] = useState(false);
-
-  // Feature 2: file selection + validate
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [showValidateForm, setShowValidateForm] = useState(false);
-  const [executePlugins, setExecutePlugins] = useState<NexusPlugin[]>([]);
-  const [validatePlugins, setValidatePlugins] = useState<NexusPlugin[]>([]);
-  const [validateExecPluginId, setValidateExecPluginId] = useState('');
-  const [validateChain, setValidateChain] = useState<Array<{ pluginId: string }>>([]);
 
   const loadDiff = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
     if (!window.nexusAPI?.git) return;
     setLoading(true);
     try {
-      const files = await window.nexusAPI.git.diff(activeProjectId);
+      const files = await window.nexusAPI.git.diff(activeProjectId, activeWorktreePath ?? undefined);
       setDiffFiles(files);
       purgeStaleReviews(files.map((f) => ({ filePath: f.filePath, signature: `${f.additions}-${f.deletions}` })));
     } catch (err) {
@@ -152,7 +141,7 @@ export const DiffViewer = (): React.JSX.Element => {
     } finally {
       setLoading(false);
     }
-  }, [activeProjectId, purgeStaleReviews]);
+  }, [activeProjectId, activeWorktreePath, purgeStaleReviews]);
 
   useEffect(() => {
     void loadDiff();
@@ -163,19 +152,6 @@ export const DiffViewer = (): React.JSX.Element => {
       commitInputRef.current?.focus();
     }
   }, [isCommitting]);
-
-  // Lazy-load plugins when validate form opens
-  useEffect(() => {
-    if (!showValidateForm) return;
-    if (!window.nexusAPI?.plugins) return;
-    void window.nexusAPI.plugins.list('execute').then((plugins) => {
-      setExecutePlugins(plugins);
-      if (plugins.length > 0 && validateExecPluginId === '') {
-        setValidateExecPluginId(plugins[0].id);
-      }
-    });
-    void window.nexusAPI.plugins.list('validate').then(setValidatePlugins);
-  }, [showValidateForm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute visible files (filtering out reviewed when hideReviewed is on)
   const visibleFiles = useMemo(() => {
@@ -223,7 +199,7 @@ export const DiffViewer = (): React.JSX.Element => {
     if (activeProjectId === null) return;
     if (!window.nexusAPI?.git) return;
     try {
-      await window.nexusAPI.git.stageAll(activeProjectId);
+      await window.nexusAPI.git.stageAll(activeProjectId, activeWorktreePath ?? undefined);
       await loadDiff();
     } catch (err) {
       console.error('[DiffViewer] stage all failed:', err);
@@ -252,7 +228,7 @@ export const DiffViewer = (): React.JSX.Element => {
     }
     try {
       setCommitError(null);
-      await window.nexusAPI.git.commit(activeProjectId, msg);
+      await window.nexusAPI.git.commit(activeProjectId, msg, activeWorktreePath ?? undefined);
       setIsCommitting(false);
       setCommitMessage('');
       await loadDiff();
@@ -271,29 +247,6 @@ export const DiffViewer = (): React.JSX.Element => {
 
   const handleOpenFullDiff = (file: DiffFile, hunks: DiffHunkType[]): void => {
     setFullDiffEntry({ file, hunks });
-  };
-
-  const handleValidateSubmit = async (): Promise<void> => {
-    if (activeProjectId === null) return;
-    if (!window.nexusAPI?.pipeline) return;
-    const config: PipelineConfig = {
-      name: `Validate diff ${new Date().toLocaleTimeString()}`,
-      projectId: activeProjectId,
-      branch: '',
-      plan: { pluginId: 'noop' },
-      execute: { pluginId: validateExecPluginId },
-      validate: { chain: validateChain },
-    };
-    try {
-      const run = await window.nexusAPI.pipeline.create(activeProjectId, config);
-      addRun(run);
-      setActiveRun(run.id);
-      setActiveTab('pipeline');
-      await window.nexusAPI.pipeline.start(run.id, 'plan');
-      setShowValidateForm(false);
-    } catch (err) {
-      console.error('[DiffViewer] validate submit failed:', err);
-    }
   };
 
   const renderFileList = (): React.JSX.Element => {
@@ -340,7 +293,8 @@ export const DiffViewer = (): React.JSX.Element => {
     <div className="flex h-full flex-col">
       {/* Sticky header */}
       <div className="sticky top-0 z-10 border-b border-border-subtle bg-bg-void">
-        <div className="flex items-center gap-2 px-5 py-2">
+        {/* Row 1: file summary + actions */}
+        <div className="flex items-center gap-2 px-4 py-1.5">
           {/* Select all checkbox */}
           <button
             title={allSelected ? 'Deselect all' : 'Select all'}
@@ -357,15 +311,25 @@ export const DiffViewer = (): React.JSX.Element => {
           </button>
 
           <div className="font-mono text-[10px] text-text-tertiary">
-            {totalFiles} files &middot;{' '}
+            <span>{totalFiles}f</span>{' '}
             <span className="text-[var(--color-added)]">+{totalAdded}</span>{' '}
             <span className="text-[var(--color-deleted)]">-{totalDeleted}</span>
           </div>
 
-          {/* View mode toggle */}
+          <div className="ml-auto flex gap-1.5">
+            <DiffButton label="stage all" onClick={handleStageAll} />
+            {isCommitting ? (
+              <DiffButton label="cancel" onClick={handleCommitCancel} />
+            ) : (
+              <DiffButton label="commit" primary onClick={handleCommitOpen} />
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: view controls */}
+        <div className="flex items-center gap-2 border-t border-border-subtle px-4 py-1">
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
 
-          {/* Hide reviewed toggle */}
           <button
             title={hideReviewed ? 'Show reviewed files' : 'Hide reviewed files'}
             onClick={() => setHideReviewed((h) => !h)}
@@ -375,26 +339,13 @@ export const DiffViewer = (): React.JSX.Element => {
                 : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
             }`}
           >
-            reviewed
+            hide reviewed
           </button>
-
-          <div className="ml-auto flex gap-1.5">
-            <DiffButton label="stage all" onClick={handleStageAll} />
-            <DiffButton
-              label={selectedFiles.size > 0 ? `validate (${selectedFiles.size})` : 'validate all'}
-              onClick={() => { setShowValidateForm((v) => !v); setIsCommitting(false); }}
-            />
-            {isCommitting ? (
-              <DiffButton label="cancel" onClick={handleCommitCancel} />
-            ) : (
-              <DiffButton label="commit" primary onClick={handleCommitOpen} />
-            )}
-          </div>
         </div>
 
         {/* Inline commit form */}
         {isCommitting && (
-          <div className="flex flex-col gap-1.5 border-t border-border-subtle px-5 py-2">
+          <div className="flex flex-col gap-1.5 border-t border-border-subtle px-4 py-2">
             <div className="flex items-center gap-2">
               <input
                 ref={commitInputRef}
@@ -410,65 +361,6 @@ export const DiffViewer = (): React.JSX.Element => {
             {commitError !== null && (
               <p className="font-mono text-[10px] text-sem-danger">{commitError}</p>
             )}
-          </div>
-        )}
-
-        {/* Inline validate form */}
-        {showValidateForm && (
-          <div className="flex flex-col gap-2 border-t border-border-subtle px-5 py-2.5">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] text-text-tertiary">Agent:</span>
-              <select
-                value={validateExecPluginId}
-                onChange={(e) => setValidateExecPluginId(e.target.value)}
-                className="flex-1 rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2 py-[3px] font-mono text-[10px] text-text-primary outline-none focus:border-border-strong"
-              >
-                {executePlugins.length === 0 && <option value="">loading...</option>}
-                {executePlugins.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[10px] text-text-tertiary">Chain:</span>
-              {validateChain.map((step, i) => {
-                const plugin = validatePlugins.find((p) => p.id === step.pluginId);
-                return (
-                  <span
-                    key={`${step.pluginId}-${i}`}
-                    className="flex items-center gap-1 rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-1.5 py-[2px] font-mono text-[10px] text-text-secondary"
-                  >
-                    {plugin?.name ?? step.pluginId}
-                    <button
-                      onClick={() => setValidateChain((c) => c.filter((_, idx) => idx !== i))}
-                      className="cursor-pointer text-text-ghost hover:text-[var(--color-deleted)]"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                );
-              })}
-              {validatePlugins.length > 0 && (
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setValidateChain((c) => [...c, { pluginId: e.target.value }]);
-                    }
-                  }}
-                  className="rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-1.5 py-[2px] font-mono text-[10px] text-text-ghost outline-none focus:border-border-strong"
-                >
-                  <option value="">+ add step</option>
-                  {validatePlugins.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="flex gap-1.5">
-              <DiffButton label="validate chain" primary onClick={handleValidateSubmit} />
-              <DiffButton label="cancel" onClick={() => setShowValidateForm(false)} />
-            </div>
           </div>
         )}
       </div>

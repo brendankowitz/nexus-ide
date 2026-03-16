@@ -11,6 +11,7 @@ import type {
 interface ProjectState {
   projects: Project[];
   activeProjectId: string | null;
+  activeWorktreePath: string | null;
   gitStatus: Record<string, GitStatus>;
   branches: Record<string, Branch[]>;
   worktrees: Record<string, Worktree[]>;
@@ -22,6 +23,7 @@ interface ProjectActions {
   addProject: (project: Project) => void;
   removeProject: (id: string) => void;
   setActiveProject: (id: string | null) => void;
+  setActiveWorktreePath: (path: string | null) => void;
   updateGitStatus: (projectId: string, status: GitStatus) => void;
   setBranches: (projectId: string, branches: Branch[]) => void;
   setWorktrees: (projectId: string, worktrees: Worktree[]) => void;
@@ -38,6 +40,7 @@ type ProjectStore = ProjectState & ProjectActions;
 const initialState = {
   projects: [],
   activeProjectId: null,
+  activeWorktreePath: null,
   gitStatus: {},
   branches: {},
   worktrees: {},
@@ -79,6 +82,12 @@ export const useProjectStore = create<ProjectStore>()(
     setActiveProject: (id) =>
       set((state: ProjectState) => {
         state.activeProjectId = id;
+        state.activeWorktreePath = null;
+      }),
+
+    setActiveWorktreePath: (path) =>
+      set((state: ProjectState) => {
+        state.activeWorktreePath = path;
       }),
 
     updateGitStatus: (projectId, status) =>
@@ -154,14 +163,24 @@ export const selectActiveProject = (s: ProjectState): Project | null =>
     ? s.projects.find((p) => p.id === s.activeProjectId) ?? null
     : null;
 
+const EMPTY_BRANCHES: Branch[] = [];
+const EMPTY_WORKTREES: Worktree[] = [];
+
 /** Select branches for the active project. */
 export const selectActiveBranches = (s: ProjectState): Branch[] =>
-  s.activeProjectId !== null ? (s.branches[s.activeProjectId] ?? []) : [];
+  s.activeProjectId !== null ? (s.branches[s.activeProjectId] ?? EMPTY_BRANCHES) : EMPTY_BRANCHES;
 
 /** Select worktrees for the active project. */
 export const selectActiveWorktrees = (s: ProjectState): Worktree[] =>
-  s.activeProjectId !== null ? (s.worktrees[s.activeProjectId] ?? []) : [];
+  s.activeProjectId !== null ? (s.worktrees[s.activeProjectId] ?? EMPTY_WORKTREES) : EMPTY_WORKTREES;
 
 /** Select git status for the active project. */
 export const selectActiveStatus = (s: ProjectState): GitStatus | null =>
   s.activeProjectId !== null ? (s.gitStatus[s.activeProjectId] ?? null) : null;
+
+/** Select the active git working directory (worktree path if set, else project root). */
+export const selectActiveGitPath = (s: ProjectState): string | null => {
+  if (s.activeWorktreePath !== null) return s.activeWorktreePath;
+  if (s.activeProjectId === null) return null;
+  return s.projects.find((p) => p.id === s.activeProjectId)?.path ?? null;
+};

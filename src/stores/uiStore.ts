@@ -1,40 +1,29 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-/** Static tabs are fixed; terminal tabs use the `terminal:${sessionId}` pattern. */
-export type StaticTab = 'branches' | 'worktrees' | 'diffs' | 'log' | 'pipeline' | 'settings';
-export type MainTab = StaticTab | `terminal:${string}`;
-
-export interface TerminalTabEntry {
-  id: string;          // matches the `terminal:${sessionId}` pattern value
-  sessionId: string;   // terminal session id from terminalStore
-  label: string;       // display label (e.g. "Shell", "Claude Code")
-}
+export type SCTab = 'branches' | 'worktrees' | 'diffs' | 'log';
 
 interface UIState {
-  activeTab: MainTab;
-  agentPanelExpanded: boolean;
+  activeTab: SCTab;
   commandPaletteOpen: boolean;
   addProjectModalOpen: boolean;
+  settingsModalOpen: boolean;
   expandedDiffFiles: Record<string, boolean>;
   reviewedFiles: Record<string, { checkedAt: number; signature: string }>;
   lastKeyPressed: string | null;
-  terminalTabs: TerminalTabEntry[];
 }
 
 interface UIActions {
-  setActiveTab: (tab: MainTab) => void;
-  toggleAgentPanel: () => void;
+  setActiveTab: (tab: SCTab) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   toggleCommandPalette: () => void;
   setAddProjectModalOpen: (open: boolean) => void;
+  setSettingsModalOpen: (open: boolean) => void;
   toggleDiffFile: (filePath: string) => void;
   expandDiffFile: (filePath: string) => void;
   collapseDiffFile: (filePath: string) => void;
   isDiffFileExpanded: (filePath: string) => boolean;
   setLastKeyPressed: (key: string | null) => void;
-  addTerminalTab: (sessionId: string, label: string) => void;
-  removeTerminalTab: (id: string) => void;
   reviewFile: (filePath: string, signature: string) => void;
   unreviewFile: (filePath: string) => void;
   isReviewedAndUnchanged: (filePath: string, signature: string) => boolean;
@@ -44,14 +33,13 @@ interface UIActions {
 type UIStore = UIState & UIActions;
 
 const initialState = {
-  activeTab: 'branches' as MainTab,
-  agentPanelExpanded: false,
+  activeTab: 'worktrees' as SCTab,
   commandPaletteOpen: false,
   addProjectModalOpen: false,
+  settingsModalOpen: false,
   expandedDiffFiles: {} as Record<string, boolean>,
   reviewedFiles: {} as Record<string, { checkedAt: number; signature: string }>,
   lastKeyPressed: null,
-  terminalTabs: [],
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -61,11 +49,6 @@ export const useUIStore = create<UIStore>()(
     setActiveTab: (tab) =>
       set((state) => {
         state.activeTab = tab;
-      }),
-
-    toggleAgentPanel: () =>
-      set((state) => {
-        state.agentPanelExpanded = !state.agentPanelExpanded;
       }),
 
     setCommandPaletteOpen: (open) =>
@@ -81,6 +64,11 @@ export const useUIStore = create<UIStore>()(
     setAddProjectModalOpen: (open) =>
       set((state) => {
         state.addProjectModalOpen = open;
+      }),
+
+    setSettingsModalOpen: (open) =>
+      set((state) => {
+        state.settingsModalOpen = open;
       }),
 
     toggleDiffFile: (filePath) =>
@@ -107,28 +95,6 @@ export const useUIStore = create<UIStore>()(
     setLastKeyPressed: (key) =>
       set((state) => {
         state.lastKeyPressed = key;
-      }),
-
-    addTerminalTab: (sessionId, label) =>
-      set((state) => {
-        const id = `terminal:${sessionId}`;
-        const exists = state.terminalTabs.some((t) => t.id === id);
-        if (!exists) {
-          state.terminalTabs.push({ id, sessionId, label });
-        }
-        state.activeTab = id as MainTab;
-      }),
-
-    removeTerminalTab: (id) =>
-      set((state) => {
-        state.terminalTabs = state.terminalTabs.filter((t) => t.id !== id);
-        // If the closed tab was active, fall back to 'branches'
-        if (state.activeTab === id) {
-          const remaining = state.terminalTabs;
-          state.activeTab = remaining.length > 0
-            ? (remaining[remaining.length - 1].id as MainTab)
-            : 'branches';
-        }
       }),
 
     reviewFile: (filePath, signature) =>

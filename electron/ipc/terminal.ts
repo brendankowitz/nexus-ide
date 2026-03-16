@@ -11,9 +11,139 @@
  */
 
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { app } from 'electron';
 import * as pty from '@lydell/node-pty';
 import type { TerminalOptions, TerminalSession } from '../../src/types/index.js';
+
+/* ─── PATH augmentation ────────────────────────────────────────────────────── */
+
+const PATH_SEP = process.platform === 'win32' ? ';' : ':';
+
+/**
+ * Electron may start with a minimal PATH when launched from a GUI shortcut or
+ * file manager, omitting user-installed tools (git, npm globals, homebrew, etc.).
+ *
+ * - Windows: reads Machine + User PATH from the Windows environment via PowerShell.
+ * - macOS / Linux: spawns a login shell to capture its full $PATH.
+ *
+ * Merges the result into process.env.PATH so all subsequently spawned PTY
+ * processes inherit the complete PATH. Called once at app startup.
+ */
+export function augmentPathFromSystem(): void {
+  try {
+    let fromSystem: string[];
+
+    if (process.platform === 'win32') {
+      const result = execSync(
+        'powershell -NoProfile -NonInteractive -Command ' +
+        '"[System.Environment]::GetEnvironmentVariable(\'PATH\',\'Machine\') + \';\' + ' +
+        '[System.Environment]::GetEnvironmentVariable(\'PATH\',\'User\')"',
+        { encoding: 'utf8', windowsHide: true, timeout: 5000 },
+      ).trim();
+      fromSystem = result ? result.split(';').filter(Boolean) : [];
+    } else {
+      const shell = process.env['SHELL'] ?? '/bin/sh';
+      const result = execSync(`${shell} -l -c 'echo $PATH'`, {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
+      fromSystem = result ? result.split(':').filter(Boolean) : [];
+    }
+
+    if (fromSystem.length > 0) {
+      const existing = (process.env['PATH'] ?? '').split(PATH_SEP).filter(Boolean);
+      const merged = [...new Set([...fromSystem, ...existing])];
+      process.env['PATH'] = merged.join(PATH_SEP);
+    }
+  } catch {
+    // Shell query failed — inject well-known fallback paths per platform
+    if (process.platform === 'win32') {
+      const fallbacks = [
+        'C:\\Program Files\\Git\\cmd',
+        'C:\\Program Files\\Git\\bin',
+        'C:\\Program Files (x86)\\Git\\cmd',
+      ];
+      process.env['PATH'] = [...fallbacks, process.env['PATH'] ?? ''].join(';');
+    } else {
+      const fallbacks = [
+        '/opt/homebrew/bin',
+        '/opt/homebrew/sbin',
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+      ];
+      const existing = (process.env['PATH'] ?? '').split(':').filter(Boolean);
+      process.env['PATH'] = [...new Set([...fallbacks, ...existing])].join(':');
+    }
+  }
+
+  // On Windows, append dugite's bundled git/cmd to PATH as a guaranteed fallback.
+  // dugite ships git.exe inside the package (already asarUnpack'd), so git is always
+  // available even if the user has no system Git installation.
+  // System git (if present earlier in PATH) takes precedence.
+  if (process.platform === 'win32') {
+    try {
+      const appPath = app.getAppPath();
+      const dugiteCandidates = [
+        join(appPath, 'node_modules', 'dugite', 'git', 'cmd'),              // dev
+        join(appPath + '.unpacked', 'node_modules', 'dugite', 'git', 'cmd'), // packaged (asarUnpack)
+      ];
+      for (const candidate of dugiteCandidates) {
+        if (existsSync(join(candidate, 'git.exe'))) {
+          const entries = (process.env['PATH'] ?? '').split(';').filter(Boolean);
+          if (!entries.includes(candidate)) {
+            process.env['PATH'] = [...entries, candidate].join(';');
+          }
+          break;
+        }
+      }
+    } catch { /* dugite not available */ }
+  }
+
+  // On Windows, Claude Code requires bash.exe (or a bash-compatible shell).
+  // If CLAUDE_CODE_GIT_BASH_PATH is not already set, locate one and set it.
+  //
+  // Search order (most-reliable → least):
+  //   1. dugite's bundled sh.exe — confirmed to be GNU bash 5.x, already
+  //      asarUnpack'd so it works in packaged builds with zero user setup.
+  //   2. bash.exe found in PATH entries — covers SmartGit, Cygwin, MSYS2, etc.
+  //   3. Well-known Git for Windows install paths.
+  if (process.platform === 'win32' && !process.env['CLAUDE_CODE_GIT_BASH_PATH']) {
+    const bashCandidates: string[] = [];
+
+    // 1. dugite's sh.exe (it IS GNU bash — confirmed via --version probe)
+    try {
+      const appPath = app.getAppPath();
+      for (const base of [appPath, appPath + '.unpacked']) {
+        bashCandidates.push(join(base, 'node_modules', 'dugite', 'git', 'usr', 'bin', 'sh.exe'));
+      }
+    } catch { /* app not ready */ }
+
+    // 2. bash.exe / sh.exe in current PATH entries
+    const pathEntries = (process.env['PATH'] ?? '').split(';').filter(Boolean);
+    for (const dir of pathEntries) {
+      bashCandidates.push(join(dir, 'bash.exe'));
+      bashCandidates.push(join(dir, 'sh.exe'));
+    }
+
+    // 3. Well-known Git for Windows install paths
+    bashCandidates.push(
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+    );
+
+    for (const candidate of bashCandidates) {
+      if (existsSync(candidate)) {
+        process.env['CLAUDE_CODE_GIT_BASH_PATH'] = candidate;
+        break;
+      }
+    }
+  }
+}
 
 /* ─── Shell detection ──────────────────────────────────────────────────────── */
 
@@ -71,14 +201,45 @@ const sessions = new Map<string, SessionEntry>();
  * @returns Session ID (UUID v4).
  * @throws If the PTY process fails to spawn (e.g. command not found).
  */
+/**
+ * Resolve the actual PTY shell + args to spawn.
+ *
+ * On Windows, npm globals install as `.cmd` wrappers and Electron may not
+ * inherit the full user shell PATH. We wrap any explicit command in the
+ * default shell (pwsh / cmd) so that PATH resolution, .cmd files, and
+ * user profile are all available — exactly as VSCode's integrated terminal does.
+ */
+function resolveSpawn(options: TerminalOptions): { shell: string; spawnArgs: string[] } {
+  const defaultShell = detectDefaultShell();
+
+  if (!options.command) {
+    // Plain shell session
+    return { shell: defaultShell, spawnArgs: options.args ?? [] };
+  }
+
+  if (process.platform === 'win32') {
+    const cmdLine = [options.command, ...(options.args ?? [])].join(' ');
+    const isPwsh =
+      defaultShell.toLowerCase().includes('pwsh') ||
+      defaultShell.toLowerCase().includes('powershell');
+    if (isPwsh) {
+      return { shell: defaultShell, spawnArgs: ['-NoExit', '-Command', cmdLine] };
+    } else {
+      return { shell: defaultShell, spawnArgs: ['/k', cmdLine] };
+    }
+  }
+
+  // Unix/macOS — spawn directly
+  return { shell: options.command, spawnArgs: options.args ?? [] };
+}
+
 export function createSession(options: TerminalOptions): string {
   const id = randomUUID();
-  const shell = options.command ?? options.shell ?? detectDefaultShell();
-  const args = options.args ?? [];
+  const { shell, spawnArgs: args } = resolveSpawn(options);
   const cwd = (options.cwd ?? options.worktreePath ?? process.cwd()).replace(/\\/g, '/');
 
-  // Detect session type from command name
-  const commandBase = shell.replace(/\\/g, '/').split('/').pop()?.replace(/\.exe$/i, '') ?? shell;
+  // Detect session type from the original requested command (not the wrapper shell)
+  const commandBase = (options.command ?? shell).replace(/\\/g, '/').split('/').pop()?.replace(/\.exe$/i, '') ?? shell;
   const sessionType: SessionEntry['sessionType'] =
     commandBase === 'claude' ? 'claude'
     : commandBase === 'copilot' ? 'copilot'

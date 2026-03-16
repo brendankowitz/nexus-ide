@@ -302,6 +302,21 @@ export async function checkout(
   }
 }
 
+/* ─── createBranch ─────────────────────────────────────────────────────────── */
+
+/**
+ * Run `git checkout -b <branchName>` to create and checkout a new branch.
+ */
+export async function createBranch(
+  projectPath: string,
+  branchName: string,
+): Promise<void> {
+  const result = await execGit(projectPath, ['checkout', '-b', branchName]);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to create branch');
+  }
+}
+
 /* ─── getDiff ──────────────────────────────────────────────────────────────── */
 
 /** Map porcelain status codes to our DiffFile status type. */

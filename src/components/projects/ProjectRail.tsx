@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
+
+const GearIcon = (): React.JSX.Element => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M13.3 9.6c.1-.2.1-.4.1-.6 0-.2 0-.4-.1-.6l1.4-1.1a.3.3 0 0 0 .1-.4l-1.3-2.3a.3.3 0 0 0-.4-.1l-1.6.7c-.3-.3-.7-.5-1.1-.7L10.2 3a.3.3 0 0 0-.3-.3H7.1a.3.3 0 0 0-.3.3l-.2 1.5c-.4.2-.8.4-1.1.7l-1.6-.7a.3.3 0 0 0-.4.1L2.2 6.9a.3.3 0 0 0 .1.4L3.7 8.4c-.1.2-.1.4-.1.6 0 .2 0 .4.1.6L2.3 10.7a.3.3 0 0 0-.1.4l1.3 2.3c.1.2.3.2.4.1l1.6-.7c.3.3.7.5 1.1.7l.2 1.5c0 .2.1.3.3.3h2.6c.2 0 .3-.1.3-.3l.2-1.5c.4-.2.8-.4 1.1-.7l1.6.7c.2.1.4 0 .4-.1l1.3-2.3a.3.3 0 0 0-.1-.4l-1.4-1.1Z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { AddProjectModal } from '@/components/projects/AddProjectModal';
 import type { ProjectGroup } from '@/types';
@@ -145,6 +152,7 @@ export const ProjectRail = (): React.JSX.Element => {
 
   const showAddModal = useUIStore((s) => s.addProjectModalOpen);
   const setShowAddModal = useUIStore((s) => s.setAddProjectModalOpen);
+  const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
   // Track which group was just created so GroupHeader can auto-enter rename mode
   const [newGroupId, setNewGroupId] = useState<string | null>(null);
@@ -226,7 +234,7 @@ export const ProjectRail = (): React.JSX.Element => {
         </div>
 
         {/* Project list */}
-        <div className="flex-1 overflow-y-auto px-1.5 py-1">
+        <div className="flex-1 overflow-y-auto px-1.5 py-1 min-h-0">
           {!hasAnything ? (
             <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
               <span className="font-mono text-[11px] text-text-ghost">No projects yet</span>
@@ -298,6 +306,18 @@ export const ProjectRail = (): React.JSX.Element => {
               ))}
             </>
           )}
+        </div>
+
+        {/* Settings button — pinned to bottom */}
+        <div className="shrink-0 border-t border-border-subtle px-2 py-2">
+          <button
+            onClick={() => setSettingsModalOpen(true)}
+            title="Settings (Ctrl+,)"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-text-ghost transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover hover:text-text-secondary"
+          >
+            <GearIcon />
+            <span className="font-mono text-[10px]">settings</span>
+          </button>
         </div>
       </div>
 

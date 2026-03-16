@@ -60,7 +60,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
   const isOpen = useUIStore((s) => s.commandPaletteOpen);
   const setOpen = useUIStore((s) => s.setCommandPaletteOpen);
   const setActiveTab = useUIStore((s) => s.setActiveTab);
-  const toggleAgentPanel = useUIStore((s) => s.toggleAgentPanel);
+  const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
   const projects = useProjectStore((s) => s.projects);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
@@ -129,28 +129,6 @@ export const CommandPalette = (): React.JSX.Element | null => {
       },
     },
     {
-      id: 'cmd-new-worktree',
-      label: 'New worktree',
-      hint: '',
-      group: 'commands',
-      icon: 'command',
-      action: () => {
-        setActiveTab('worktrees');
-        close();
-      },
-    },
-    {
-      id: 'cmd-new-pipeline',
-      label: 'New pipeline run',
-      hint: 'Ctrl+Shift+N',
-      group: 'commands',
-      icon: 'command',
-      action: () => {
-        setActiveTab('pipeline');
-        close();
-      },
-    },
-    {
       id: 'cmd-add-project',
       label: 'Add project',
       hint: '',
@@ -169,18 +147,7 @@ export const CommandPalette = (): React.JSX.Element | null => {
       group: 'commands',
       icon: 'command',
       action: () => {
-        setActiveTab('settings');
-        close();
-      },
-    },
-    {
-      id: 'cmd-toggle-agent',
-      label: 'Toggle agent panel',
-      hint: 'Ctrl+`',
-      group: 'commands',
-      icon: 'command',
-      action: () => {
-        toggleAgentPanel();
+        setSettingsModalOpen(true);
         close();
       },
     },

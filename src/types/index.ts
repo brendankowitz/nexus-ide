@@ -325,21 +325,22 @@ export interface NexusAPI {
 
   // Git operations
   git: {
-    branches(projectId: string): Promise<Branch[]>;
+    branches(projectId: string, worktreePath?: string): Promise<Branch[]>;
     worktrees(projectId: string): Promise<Worktree[]>;
     createWorktree(projectId: string, branch: string, path?: string): Promise<Worktree>;
     removeWorktree(projectId: string, path: string): Promise<void>;
     checkout(projectId: string, branch: string): Promise<void>;
-    diff(projectId: string): Promise<DiffFile[]>;
-    diffHunks(projectId: string, filePath: string): Promise<DiffHunk[]>;
+    createBranch(projectId: string, branchName: string): Promise<void>;
+    diff(projectId: string, worktreePath?: string): Promise<DiffFile[]>;
+    diffHunks(projectId: string, filePath: string, worktreePath?: string): Promise<DiffHunk[]>;
     commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]>;
     commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]>;
-    log(projectId: string, count?: number): Promise<Commit[]>;
-    status(projectId: string): Promise<GitStatus>;
-    stage(projectId: string, filePath: string): Promise<void>;
-    unstage(projectId: string, filePath: string): Promise<void>;
-    stageAll(projectId: string): Promise<void>;
-    commit(projectId: string, message: string): Promise<string>;
+    log(projectId: string, count?: number, worktreePath?: string): Promise<Commit[]>;
+    status(projectId: string, worktreePath?: string): Promise<GitStatus>;
+    stage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
+    unstage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
+    stageAll(projectId: string, worktreePath?: string): Promise<void>;
+    commit(projectId: string, message: string, worktreePath?: string): Promise<string>;
   };
 
   // Settings persistence

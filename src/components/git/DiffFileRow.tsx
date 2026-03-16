@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { DiffHunk } from '@/components/git/DiffHunk';
 import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
@@ -30,6 +31,7 @@ export const DiffFileRow = ({
   selected,
   onToggleSelect,
 }: DiffFileRowProps): React.JSX.Element => {
+  const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const expandedFiles = useUIStore((s) => s.expandedDiffFiles);
   const toggleDiffFile = useUIStore((s) => s.toggleDiffFile);
   const reviewFile = useUIStore((s) => s.reviewFile);
@@ -50,13 +52,13 @@ export const DiffFileRow = ({
 
     setLoadingHunks(true);
     window.nexusAPI.git
-      .diffHunks(activeProjectId, file.filePath)
+      .diffHunks(activeProjectId, file.filePath, activeWorktreePath ?? undefined)
       .then(setHunks)
       .catch((err: unknown) =>
         console.error('[DiffFileRow] failed to load hunks:', err),
       )
       .finally(() => setLoadingHunks(false));
-  }, [isExpanded, hunks.length, activeProjectId, file.filePath]);
+  }, [isExpanded, hunks.length, activeProjectId, file.filePath, activeWorktreePath]);
 
   // Split path into directory and filename
   const lastSlash = file.filePath.lastIndexOf('/');
@@ -70,13 +72,13 @@ export const DiffFileRow = ({
       if (activeProjectId === null) return;
       if (!window.nexusAPI?.git) return;
       try {
-        await window.nexusAPI.git.stage(activeProjectId, file.filePath);
+        await window.nexusAPI.git.stage(activeProjectId, file.filePath, activeWorktreePath ?? undefined);
         await onRefresh();
       } catch (err) {
         console.error('[DiffFileRow] stage failed:', err);
       }
     },
-    [activeProjectId, file.filePath, onRefresh],
+    [activeProjectId, file.filePath, activeWorktreePath, onRefresh],
   );
 
   const handleUnstage = useCallback(
@@ -85,13 +87,13 @@ export const DiffFileRow = ({
       if (activeProjectId === null) return;
       if (!window.nexusAPI?.git) return;
       try {
-        await window.nexusAPI.git.unstage(activeProjectId, file.filePath);
+        await window.nexusAPI.git.unstage(activeProjectId, file.filePath, activeWorktreePath ?? undefined);
         await onRefresh();
       } catch (err) {
         console.error('[DiffFileRow] unstage failed:', err);
       }
     },
-    [activeProjectId, file.filePath, onRefresh],
+    [activeProjectId, file.filePath, activeWorktreePath, onRefresh],
   );
 
   const handleOpenFullDiff = useCallback(
@@ -108,6 +110,7 @@ export const DiffFileRow = ({
         const loaded = await window.nexusAPI.git.diffHunks(
           activeProjectId,
           file.filePath,
+          activeWorktreePath ?? undefined,
         );
         setHunks(loaded);
         onOpenFullDiff(file, loaded);
@@ -118,7 +121,7 @@ export const DiffFileRow = ({
         );
       }
     },
-    [activeProjectId, file, hunks, onOpenFullDiff],
+    [activeProjectId, file, hunks, activeWorktreePath, onOpenFullDiff],
   );
 
   const handleReviewToggle = useCallback(
