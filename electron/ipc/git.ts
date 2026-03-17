@@ -256,7 +256,18 @@ export async function createWorktree(
     ? normalizePath(targetPath)
     : `${normalizedRoot}-${branch.replace(/\//g, '-')}`;
 
-  const result = await execGit(projectPath, ['worktree', 'add', resolved, branch]);
+  // Check whether the branch already exists locally
+  const refCheck = await execGit(projectPath, [
+    'show-ref', '--verify', '--quiet', `refs/heads/${branch}`,
+  ]);
+  const branchExists = refCheck.exitCode === 0;
+
+  // If branch exists: checkout into worktree; otherwise create it fresh (-b)
+  const args = branchExists
+    ? ['worktree', 'add', resolved, branch]
+    : ['worktree', 'add', '-b', branch, resolved];
+
+  const result = await execGit(projectPath, args);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || 'Failed to create worktree');
   }

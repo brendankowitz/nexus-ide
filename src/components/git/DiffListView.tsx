@@ -14,7 +14,7 @@ interface DiffListViewProps {
 }
 
 type FixedCol = keyof ColWidths;
-const COL_MIN: ColWidths = { path: 50, state: 40, changes: 40 };
+const COL_MIN: ColWidths = { name: 60, path: 50, state: 40, changes: 40 };
 
 function getFileName(filePath: string): string {
   const lastSlash = filePath.lastIndexOf('/');
@@ -98,17 +98,10 @@ export const DiffListView = ({
       <div className="flex items-center gap-2.5 border-b border-border-default px-5 py-1.5">
         {/* Spacer for select + expand + status icons */}
         <div className={`${onToggleSelect !== undefined ? 'w-[56px]' : 'w-[42px]'} shrink-0`} />
-        {/* File Name — flex-1, no resize */}
-        <button
-          onClick={() => handleColumnClick('name')}
-          className="flex-1 min-w-0 cursor-pointer select-none text-left font-mono text-[9px] font-medium uppercase tracking-wider text-text-ghost transition-colors hover:text-text-secondary"
-        >
-          File Name{sortColumn === 'name' && <span className="ml-0.5 text-text-tertiary">{sortDirection === 'asc' ? '▴' : '▾'}</span>}
-        </button>
-        {/* Fixed-width columns with resize handles */}
-        {(['path', 'state', 'changes'] as FixedCol[]).map((col, i) => {
-          const labels: Record<FixedCol, string> = { path: 'Path', state: 'State', changes: '+/-' };
-          const aligns: Record<FixedCol, string> = { path: 'text-left', state: 'text-center', changes: 'text-right' };
+        {/* All fixed-width columns with resize handles */}
+        {(['name', 'path', 'state', 'changes'] as FixedCol[]).map((col) => {
+          const labels: Record<FixedCol, string> = { name: 'File Name', path: 'Path', state: 'State', changes: '+/-' };
+          const aligns: Record<FixedCol, string> = { name: 'text-left', path: 'text-left', state: 'text-center', changes: 'text-right' };
           return (
             <div key={col} className="relative shrink-0" style={{ width: colWidths[col] }}>
               <button
@@ -117,7 +110,6 @@ export const DiffListView = ({
               >
                 {labels[col]}{sortColumn === col && <span className="ml-0.5 text-text-tertiary">{sortDirection === 'asc' ? '▴' : '▾'}</span>}
               </button>
-              {/* Resize handle — on every column including last for symmetry */}
               <div
                 onMouseDown={(e) => startResize(col, e)}
                 className="group absolute inset-y-0 -right-[5px] w-[10px] cursor-col-resize"
@@ -128,6 +120,8 @@ export const DiffListView = ({
             </div>
           );
         })}
+        {/* Flex spacer — absorbs remaining width, keeps action buttons right-aligned */}
+        <div className="min-w-0 flex-1" />
         {/* Spacer for action buttons */}
         <div className="w-[52px] shrink-0" />
       </div>

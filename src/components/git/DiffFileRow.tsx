@@ -5,12 +5,13 @@ import { DiffHunk } from '@/components/git/DiffHunk';
 import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
 export interface ColWidths {
+  name: number;
   path: number;
   state: number;
   changes: number;
 }
 
-export const DEFAULT_COL_WIDTHS: ColWidths = { path: 140, state: 60, changes: 60 };
+export const DEFAULT_COL_WIDTHS: ColWidths = { name: 160, path: 140, state: 60, changes: 60 };
 
 export interface DiffFileRowProps {
   file: DiffFile;
@@ -235,7 +236,7 @@ export const DiffFileRow = ({
         {layout === 'table' ? (
           <>
             {/* Table layout: separate columns */}
-            <span className="min-w-0 flex-1 truncate text-text-primary">
+            <span className="shrink-0 truncate text-text-primary" style={{ width: colWidths.name }}>
               {filename}
               {file.status === 'R' && file.oldPath !== undefined && (
                 <span className="text-text-tertiary">
@@ -264,6 +265,8 @@ export const DiffFileRow = ({
                 </span>
               )}
             </div>
+            {/* Spacer: absorbs remaining width so action buttons stay right-aligned */}
+            <div className="min-w-0 flex-1" />
           </>
         ) : (
           <>
