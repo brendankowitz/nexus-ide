@@ -17,6 +17,7 @@ asarUnpack:
   - "node_modules/@parcel/watcher/**"
 
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
