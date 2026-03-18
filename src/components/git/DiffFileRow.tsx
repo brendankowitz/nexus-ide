@@ -96,6 +96,17 @@ export const DiffFileRow = ({
     } catch (err) { console.error('[revert]', err); }
   }, [activeProjectId, file.filePath, onRefresh]);
 
+  const handleDelete = useCallback(async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!window.confirm(`Delete ${file.filePath}? This cannot be undone.`)) return;
+    if (!activeProjectId || !window.nexusAPI?.git) return;
+    try {
+      await window.nexusAPI.git.deleteFile(activeProjectId, file.filePath, activeWorktreePath ?? undefined);
+      await onRefresh();
+    } catch (err) { console.error('[delete]', err); }
+  }, [activeProjectId, file.filePath, activeWorktreePath, onRefresh]);
+
   const handleLaunchExternalDiff = useCallback(async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation();
     setMenuOpen(false);
@@ -106,8 +117,9 @@ export const DiffFileRow = ({
   }, [activeProjectId, file.filePath, file.status]);
 
   const canRevert = file.status === 'M' || file.status === 'D';
+  const canDelete = file.status === 'A' || file.status === 'M';
   const hasExternalDiff = Boolean(externalDiffCommand?.trim());
-  const showMenu = canRevert || hasExternalDiff;
+  const showMenu = canRevert || canDelete || hasExternalDiff;
 
   // Split path into directory and filename
   const lastSlash = file.filePath.lastIndexOf('/');
@@ -376,6 +388,12 @@ export const DiffFileRow = ({
                   <button onClick={(e) => { void handleRevert(e); }}
                     className="w-full cursor-pointer px-3 py-1.5 text-left font-mono text-[11px] text-[var(--color-deleted)] hover:bg-bg-hover">
                     Revert changes
+                  </button>
+                )}
+                {canDelete && (
+                  <button onClick={(e) => { void handleDelete(e); }}
+                    className="w-full cursor-pointer px-3 py-1.5 text-left font-mono text-[11px] text-[var(--color-deleted)] hover:bg-bg-hover">
+                    Delete file
                   </button>
                 )}
                 {hasExternalDiff && (

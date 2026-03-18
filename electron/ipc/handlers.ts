@@ -67,6 +67,7 @@ import {
   commit,
   getFileContent,
   revertFile,
+  deleteFile,
   launchExternalDiff,
 } from './git.js';
 
@@ -157,6 +158,7 @@ export const IPC_CHANNELS = {
   GIT_COMMIT: 'git:commit',
   GIT_FILE_CONTENT: 'git:file-content',
   GIT_REVERT_FILE: 'git:revert-file',
+  GIT_DELETE_FILE: 'git:delete-file',
   GIT_LAUNCH_EXTERNAL_DIFF: 'git:launch-external-diff',
 
   SETTINGS_GET: 'settings:get',
@@ -650,6 +652,18 @@ export function registerIpcHandlers(): void {
         await revertFile(worktreePath ?? projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_REVERT_FILE_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_DELETE_FILE,
+    async (_event, projectId: string, filePath: string, worktreePath?: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await deleteFile(worktreePath ?? projectPath, filePath);
+      } catch (err) {
+        throwIpcError('GIT_DELETE_FILE_FAILED', err);
       }
     },
   );

@@ -357,6 +357,7 @@ export interface NexusAPI {
     commit(projectId: string, message: string, worktreePath?: string): Promise<string>;
     fileContent(projectId: string, filePath: string): Promise<{ head: string | null; working: string }>;
     revertFile(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
+    deleteFile(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     launchExternalDiff(projectId: string, filePath: string, fileStatus: 'M' | 'A' | 'D' | 'R', worktreePath?: string): Promise<void>;
   };
 

@@ -13,7 +13,7 @@
 
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, unlink } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { exec as dugiteExec } from 'dugite';
 
@@ -822,6 +822,19 @@ export async function revertFile(
   filePath: string,
 ): Promise<void> {
   await execGit(projectPath, ['checkout', 'HEAD', '--', normalizePath(filePath)]);
+}
+
+/* ─── deleteFile ───────────────────────────────────────────────────────────── */
+
+/**
+ * Delete a file from the working tree by removing it from the filesystem.
+ * Only valid for untracked (A) or modified (M) files.
+ */
+export async function deleteFile(
+  projectPath: string,
+  filePath: string,
+): Promise<void> {
+  await unlink(join(projectPath, filePath));
 }
 
 /* ─── stageAll ─────────────────────────────────────────────────────────────── */

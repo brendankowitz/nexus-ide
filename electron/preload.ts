@@ -76,6 +76,7 @@ const CH = {
   GIT_COMMIT: 'git:commit',
   GIT_FILE_CONTENT: 'git:file-content',
   GIT_REVERT_FILE: 'git:revert-file',
+  GIT_DELETE_FILE: 'git:delete-file',
   GIT_LAUNCH_EXTERNAL_DIFF: 'git:launch-external-diff',
 
   SETTINGS_GET: 'settings:get',
@@ -223,6 +224,9 @@ const nexusAPIImpl = {
     },
     revertFile(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_REVERT_FILE, projectId, filePath, worktreePath) as Promise<void>;
+    },
+    deleteFile(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_DELETE_FILE, projectId, filePath, worktreePath) as Promise<void>;
     },
     launchExternalDiff(projectId: string, filePath: string, fileStatus: 'M' | 'A' | 'D' | 'R', worktreePath?: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_LAUNCH_EXTERNAL_DIFF, projectId, filePath, fileStatus, worktreePath) as Promise<void>;
