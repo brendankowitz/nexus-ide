@@ -78,6 +78,7 @@ export const DevPane = (): React.JSX.Element => {
   const [launchMenuOpen, setLaunchMenuOpen] = useState(false);
   const [elsewhereExpanded, setElsewhereExpanded] = useState(false);
   const launchButtonRef = useRef<HTMLButtonElement>(null);
+  const terminalPaneRef = useRef<HTMLDivElement>(null);
   const subscribedRef = useRef<Set<string>>(new Set());
   const cleanupsRef = useRef<Map<string, () => void>>(new Map());
 
@@ -161,12 +162,23 @@ export const DevPane = (): React.JSX.Element => {
 
         const resolvedWorktreePath = option.worktreePath ?? activeProject.path;
 
+        // Estimate terminal dimensions from the pane container so the PTY spawns
+        // at the right size. TUI apps (Copilot, etc.) draw their initial UI immediately
+        // on spawn — if the PTY size doesn't match xterm's container, the cursor ends
+        // up misaligned and the app may not recover without handling SIGWINCH.
+        // JetBrains Mono 13px: ~8px wide, ~17px tall per cell.
+        const pane = terminalPaneRef.current;
+        const cols = pane && pane.offsetWidth > 0 ? Math.max(40, Math.floor(pane.offsetWidth / 8)) : 120;
+        const rows = pane && pane.offsetHeight > 0 ? Math.max(10, Math.floor(pane.offsetHeight / 17)) : 30;
+
         const sessionId = await window.nexusAPI.terminal.create({
           projectId: activeProject.id,
           worktreePath: resolvedWorktreePath,
           command,
           args,
           label: option.label,
+          cols,
+          rows,
         });
 
         addSession({
@@ -180,6 +192,7 @@ export const DevPane = (): React.JSX.Element => {
           command: option.command,
           startedAt: new Date().toISOString(),
         });
+        setActiveSession(sessionId);
       } catch (err) {
         useToastStore.getState().addToast(
           `Launch failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -187,7 +200,7 @@ export const DevPane = (): React.JSX.Element => {
         );
       }
     },
-    [activeProject, addSession],
+    [activeProject, addSession, setActiveSession],
   );
 
   const handleKill = useCallback(
@@ -334,7 +347,7 @@ export const DevPane = (): React.JSX.Element => {
       )}
 
       {/* Main area */}
-      <div className="relative flex-1 overflow-hidden">
+      <div ref={terminalPaneRef} className="relative flex-1 overflow-hidden">
         {showWelcome ? (
           <WelcomeScreen />
         ) : showEmptyState && otherSessions.length === 0 ? (

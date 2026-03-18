@@ -268,7 +268,15 @@ export function createSession(options: TerminalOptions): string {
     cols: options.cols ?? 120,
     rows: options.rows ?? 30,
     cwd,
-    env: { ...process.env, ...options.env } as Record<string, string>,
+    env: {
+      ...process.env,
+      // Ensure TUI apps (Ink, etc.) recognise the terminal correctly.
+      // TERM is set by node-pty via `name`, but TERM_PROGRAM and COLORTERM
+      // help frameworks like Ink choose the right rendering/input mode.
+      TERM_PROGRAM: 'nexus-ide',
+      COLORTERM: 'truecolor',
+      ...options.env,
+    } as Record<string, string>,
     useConpty: process.platform === 'win32',
   });
 

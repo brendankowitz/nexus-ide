@@ -275,12 +275,20 @@ export const TerminalTab = ({
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
+    // Focus so keyboard input works immediately after mount / tab switch
+    requestAnimationFrame(() => { term.focus(); });
+
     // Guard: if nexusAPI isn't available, show local-only terminal
     const api = window.nexusAPI?.terminal;
 
     // Forward PTY output to xterm
     const cleanupData = api?.onData(sessionId, (data) => {
       term.write(data);
+    });
+
+    // Update session status when PTY process exits
+    const cleanupExit = api?.onExit(sessionId, () => {
+      useTerminalStore.getState().updateSession(sessionId, { status: 'exited' });
     });
 
     // Forward user keystrokes to PTY
@@ -306,7 +314,7 @@ export const TerminalTab = ({
     });
     resizeObserver.observe(container);
 
-    // Initial resize notification to PTY
+    // Notify PTY of actual terminal dimensions (fitAddon measured the container above).
     api?.resize(sessionId, term.cols, term.rows);
 
     // Trigger a render so the header can read initial session state
@@ -317,6 +325,7 @@ export const TerminalTab = ({
       resizeObserver.disconnect();
       onDataDisposable.dispose();
       cleanupData?.();
+      cleanupExit?.();
       term.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;

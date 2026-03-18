@@ -79,6 +79,7 @@ import {
   detectDefaultShell,
   onSessionData,
   onSessionClaudeStatus,
+  onSessionExit,
 } from './terminal.js';
 
 import {
@@ -768,6 +769,12 @@ export function registerIpcHandlers(): void {
           const windows = BrowserWindow.getAllWindows();
           for (const win of windows) {
             win.webContents.send(`terminal:claude-status:${sessionId}`, status);
+          }
+        });
+        onSessionExit(sessionId, () => {
+          const windows = BrowserWindow.getAllWindows();
+          for (const win of windows) {
+            win.webContents.send(`terminal:exit:${sessionId}`);
           }
         });
         return sessionId;
