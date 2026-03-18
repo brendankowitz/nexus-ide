@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package:win": "electron-builder --win --publish never"
+    "package:win": "electron-builder --win --publish never",
+    "package:mac": "electron-builder --mac --publish never"
   },
   "dependencies": {
     "@lydell/node-pty": "^1.2.0-beta.3",
