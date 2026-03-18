@@ -22,6 +22,8 @@ if (!gotLock) {
 
 let mainWindow: BrowserWindow | null = null;
 
+const isMac = process.platform === 'darwin';
+
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -29,11 +31,15 @@ const createWindow = (): void => {
     minWidth: 960,
     minHeight: 600,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#06060c',
-      symbolColor: '#8b8ba0',
-      height: 36,
-    },
+    ...(isMac
+      ? { trafficLightPosition: { x: 12, y: 10 } }
+      : {
+          titleBarOverlay: {
+            color: '#06060c',
+            symbolColor: '#8b8ba0',
+            height: 36,
+          },
+        }),
     backgroundColor: '#0a0a14',
     show: false,
     webPreferences: {
