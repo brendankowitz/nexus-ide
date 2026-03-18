@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore, selectActiveProject } from '@/stores/projectStore';
 
+const isMac = navigator.platform.toLowerCase().includes('mac');
+
 export const TitleBar = (): React.JSX.Element => {
   const [clock, setClock] = useState(formatClock());
   const activeProject = useProjectStore(selectActiveProject);
@@ -15,7 +17,7 @@ export const TitleBar = (): React.JSX.Element => {
 
   return (
     <div
-      className="flex h-[var(--titlebar-height)] items-center border-b border-border-subtle bg-bg-void px-4 [-webkit-app-region:drag] relative z-[100]"
+      className={`flex h-[var(--titlebar-height)] items-center border-b border-border-subtle bg-bg-void ${isMac ? 'pl-20' : 'pl-4'} pr-4 [-webkit-app-region:drag] relative z-[100]`}
     >
       <span className="mr-6 font-mono text-[11px] font-bold uppercase tracking-[3px] text-text-tertiary">
         Nexus
@@ -41,7 +43,7 @@ export const TitleBar = (): React.JSX.Element => {
 
       <div className="ml-auto flex items-center gap-3 font-mono text-[10px] text-text-tertiary [-webkit-app-region:no-drag]">
         <span className="tabular-nums">{clock}</span>
-        <span>Ctrl+K</span>
+        <span>{isMac ? '\u2318K' : 'Ctrl+K'}</span>
       </div>
     </div>
   );
