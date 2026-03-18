@@ -348,27 +348,38 @@ export const DevPane = (): React.JSX.Element => {
 
       {/* Main area */}
       <div ref={terminalPaneRef} className="relative flex-1 overflow-hidden">
-        {showWelcome ? (
-          <WelcomeScreen />
-        ) : showEmptyState && otherSessions.length === 0 ? (
+        {/* Empty states — normal flow, rendered when pool is empty/irrelevant */}
+        {showWelcome && <WelcomeScreen />}
+        {showEmptyState && otherSessions.length === 0 && (
           <DevPaneEmptyState
             projectName={activeProject?.name ?? null}
             onLaunch={(opt) => { void handleLaunch(opt); }}
             onOpenLaunchMenu={() => setLaunchMenuOpen(true)}
           />
-        ) : activeSessionId !== null ? (
-          <TerminalTab
-            sessionId={activeSessionId}
-            onKill={() => void handleKill(activeSessionId)}
-            borderless
-          />
-        ) : (
+        )}
+        {!showWelcome && activeSessionId === null && !(showEmptyState && otherSessions.length === 0) && (
           <div className="flex h-full items-center justify-center">
             <span className="font-mono text-[11px] text-text-ghost">
               select a terminal above
             </span>
           </div>
         )}
+
+        {/* Persistent pool — ALL sessions stay mounted; only active is visible */}
+        {sessions.map((session) => (
+          <div
+            key={session.id}
+            className="absolute inset-0"
+            style={session.id !== activeSessionId ? { visibility: 'hidden' } : undefined}
+          >
+            <TerminalTab
+              sessionId={session.id}
+              visible={session.id === activeSessionId}
+              onKill={() => void handleKill(session.id)}
+              borderless
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

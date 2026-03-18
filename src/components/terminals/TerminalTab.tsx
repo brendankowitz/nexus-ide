@@ -232,12 +232,15 @@ interface TerminalTabProps {
   borderless?: boolean;
   /** Called when the kill button in the header is clicked. */
   onKill?: () => void;
+  /** Controls whether this terminal is the active/visible one in the pool. Defaults to true. */
+  visible?: boolean;
 }
 
 export const TerminalTab = ({
   sessionId,
   borderless = false,
   onKill,
+  visible = true,
 }: TerminalTabProps): React.JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -276,7 +279,10 @@ export const TerminalTab = ({
     fitAddonRef.current = fitAddon;
 
     // Focus so keyboard input works immediately after mount / tab switch
-    requestAnimationFrame(() => { term.focus(); });
+    // (only when visible — pool mounts hidden sessions without focus)
+    if (visible !== false) {
+      requestAnimationFrame(() => { term.focus(); });
+    }
 
     // Guard: if nexusAPI isn't available, show local-only terminal
     const api = window.nexusAPI?.terminal;
@@ -331,6 +337,30 @@ export const TerminalTab = ({
       fitAddonRef.current = null;
     };
   }, [sessionId]);
+
+  // Visibility transitions — re-fit + re-focus when becoming visible; blur when hidden
+  useEffect(() => {
+    const term = terminalRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (term === null || fitAddon === null) return;
+
+    if (visible) {
+      requestAnimationFrame(() => {
+        fitAddon.fit();
+        term.focus();
+        // SIGWINCH safety net: two-step resize forces TUI apps (Ink, etc.) to fully redraw
+        const api = window.nexusAPI?.terminal;
+        const cols = term.cols;
+        const rows = term.rows;
+        api?.resize(sessionId, cols > 1 ? cols - 1 : cols, rows);
+        requestAnimationFrame(() => {
+          api?.resize(sessionId, term.cols, term.rows);
+        });
+      });
+    } else {
+      term.blur();
+    }
+  }, [visible, sessionId]);
 
   return (
     <div
