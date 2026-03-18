@@ -206,6 +206,8 @@ export interface TerminalSession {
   startedAt: string;
   sessionType?: 'claude' | 'copilot' | 'aider' | 'shell';
   claudeStatus?: ClaudeStatus;
+  /** Terminal title set by the running application via OSC escape sequences. */
+  title?: string;
 }
 
 // ── Command Palette ──────────────────────────────

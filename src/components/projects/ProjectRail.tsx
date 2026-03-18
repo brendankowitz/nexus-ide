@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useTerminalStore } from '@/stores/terminalStore';
 import { useUIStore } from '@/stores/uiStore';
 
 const GearIcon = (): React.JSX.Element => (
@@ -154,6 +155,18 @@ export const ProjectRail = (): React.JSX.Element => {
   const setShowAddModal = useUIStore((s) => s.setAddProjectModalOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
+  // Derive running terminal count per project
+  const sessions = useTerminalStore((s) => s.sessions);
+  const agentCountByProject = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of sessions) {
+      if (s.status !== 'exited') {
+        counts[s.projectId] = (counts[s.projectId] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [sessions]);
+
   // Track which group was just created so GroupHeader can auto-enter rename mode
   const [newGroupId, setNewGroupId] = useState<string | null>(null);
 
@@ -280,7 +293,7 @@ export const ProjectRail = (): React.JSX.Element => {
                           active={project.id === activeProjectId}
                           gitStatus={gitStatus[project.id]}
                           worktreeCount={worktrees[project.id]?.length}
-                          agentCount={undefined}
+                          agentCount={agentCountByProject[project.id]}
                           activePhase={undefined}
                           onClick={() => setActiveProject(project.id)}
                           groupId={group.id}
@@ -301,7 +314,7 @@ export const ProjectRail = (): React.JSX.Element => {
                   active={project.id === activeProjectId}
                   gitStatus={gitStatus[project.id]}
                   worktreeCount={worktrees[project.id]?.length}
-                  agentCount={undefined}
+                  agentCount={agentCountByProject[project.id]}
                   activePhase={undefined}
                   onClick={() => setActiveProject(project.id)}
                   groups={groups}

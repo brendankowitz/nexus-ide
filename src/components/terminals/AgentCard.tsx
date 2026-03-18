@@ -124,8 +124,9 @@ export const AgentCard = ({
       <div className="flex h-full flex-col justify-between px-2.5 py-1.5 pl-3.5">
         {/* Row 1: label + badge + kill + dot */}
         <div className="flex items-center gap-1.5">
-          <span className="truncate font-mono text-[10px] font-medium text-text-primary" style={{ maxWidth: '90px' }}>
-            {isClaudeSession ? 'claude code' : isCopilot ? 'copilot' : session.label}
+          <span className="truncate font-mono text-[10px] font-medium text-text-primary" style={{ maxWidth: '90px' }}
+            title={session.title ?? session.label}>
+            {isClaudeSession ? 'claude code' : isCopilot ? 'copilot' : (session.title ?? session.label)}
           </span>
 
           {/* Session type badge */}

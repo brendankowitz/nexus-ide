@@ -106,8 +106,10 @@ const TerminalHeader = ({ sessionId, onKill }: TerminalHeaderProps): React.JSX.E
         {/* Status dot */}
         <div className={`h-[5px] w-[5px] shrink-0 rounded-full ${dotClass}`} />
 
-        {/* Label */}
-        <span className="font-mono text-[10px] text-text-secondary">{session.label}</span>
+        {/* Label / app-set title */}
+        <span className="font-mono text-[10px] text-text-secondary" title={session.title ?? session.label}>
+          {session.title ?? session.label}
+        </span>
 
         {/* Path */}
         {worktreeDisplay !== null && (
@@ -297,6 +299,11 @@ export const TerminalTab = ({
       useTerminalStore.getState().updateSession(sessionId, { status: 'exited' });
     });
 
+    // Propagate application-set terminal title (OSC 0/2) into the store
+    const onTitleDisposable = term.onTitleChange((title) => {
+      useTerminalStore.getState().updateSession(sessionId, { title });
+    });
+
     // Forward user keystrokes to PTY
     const onDataDisposable = term.onData((data) => {
       api?.write(sessionId, data);
@@ -329,6 +336,7 @@ export const TerminalTab = ({
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu);
       resizeObserver.disconnect();
+      onTitleDisposable.dispose();
       onDataDisposable.dispose();
       cleanupData?.();
       cleanupExit?.();
