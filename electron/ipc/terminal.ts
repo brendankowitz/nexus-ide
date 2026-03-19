@@ -127,9 +127,13 @@ export function augmentPathFromSystem(): void {
       bashCandidates.push(join(realBase, 'node_modules', 'dugite', 'git', 'usr', 'bin', 'sh.exe'));
     } catch { /* app not ready */ }
 
-    // 2. bash.exe / sh.exe in current PATH entries
+    // 2. bash.exe / sh.exe in current PATH entries — skip System32/SysWOW64 because
+    //    C:\Windows\System32\bash.exe is the WSL launcher; spawning it would open
+    //    a visible WSL window instead of a real scripting shell.
     const pathEntries = (process.env['PATH'] ?? '').split(';').filter(Boolean);
     for (const dir of pathEntries) {
+      const normalizedDir = dir.toLowerCase().replace(/\\/g, '/');
+      if (normalizedDir.includes('system32') || normalizedDir.includes('syswow64')) continue;
       bashCandidates.push(join(dir, 'bash.exe'));
       bashCandidates.push(join(dir, 'sh.exe'));
     }
