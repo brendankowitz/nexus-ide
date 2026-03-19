@@ -75,7 +75,7 @@ export const WorktreeGrid = (): React.JSX.Element => {
         </span>
         <button
           onClick={() => setShowForm((prev) => !prev)}
-          className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-execute px-2 py-0.5 font-mono text-[10px] text-phase-execute transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-execute-glow)]"
+          className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-execute px-2 py-1 font-mono text-[11px] text-phase-execute transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-execute-glow)]"
         >
           + new
         </button>
@@ -111,13 +111,13 @@ export const WorktreeGrid = (): React.JSX.Element => {
             <button
               onClick={() => void handleCreate()}
               disabled={creating || !branch.trim()}
-              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-execute px-2 py-1 font-mono text-[10px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-execute px-2 py-1 font-mono text-[11px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40"
             >
               {creating ? 'creating…' : 'create'}
             </button>
             <button
               onClick={() => { setShowForm(false); setBranch(''); setPath(''); }}
-              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[10px] text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:text-text-secondary"
+              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[11px] text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:text-text-secondary"
             >
               cancel
             </button>
@@ -192,7 +192,7 @@ export const WorktreeGrid = (): React.JSX.Element => {
 
                     {/* Main badge */}
                     {wt.isMainWorktree && (
-                      <span className="shrink-0 rounded-[2px] border border-border-strong px-[5px] py-px font-mono text-[9px] font-semibold uppercase tracking-wider text-text-ghost">
+                      <span className="shrink-0 rounded-[2px] border border-border-strong px-[5px] py-px font-mono text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
                         main
                       </span>
                     )}
@@ -213,7 +213,7 @@ export const WorktreeGrid = (): React.JSX.Element => {
                       <button
                         onClick={(e) => { e.stopPropagation(); void handleRemove(wt.path); }}
                         title="Remove worktree"
-                        className="ml-1 shrink-0 cursor-pointer font-mono text-[13px] leading-none text-text-ghost opacity-0 transition-all duration-[var(--duration-fast)] hover:text-[var(--color-danger)] group-hover:opacity-100"
+                        className="ml-1 shrink-0 cursor-pointer font-mono text-[13px] leading-none text-text-tertiary opacity-0 transition-all duration-[var(--duration-fast)] hover:text-[var(--color-danger)] group-hover:opacity-100"
                       >
                         ×
                       </button>

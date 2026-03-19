@@ -219,7 +219,7 @@ export const DiffFileRow = ({
           <button
             title={selected ? 'Deselect file' : 'Select file'}
             onClick={handleSelectToggle}
-            className={`flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[2px] border text-[8px] transition-all duration-[var(--duration-fast)] ${
+            className={`flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[2px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
               selected
                 ? 'border-phase-execute bg-phase-execute text-bg-void'
                 : 'border-border-default bg-transparent text-transparent hover:border-border-strong'
@@ -231,7 +231,7 @@ export const DiffFileRow = ({
 
         {/* Expand icon */}
         <span
-          className={`w-3 shrink-0 text-center text-[10px] text-text-ghost transition-transform duration-[var(--duration-fast)] ${
+          className={`w-3 shrink-0 text-center text-[11px] text-text-tertiary transition-transform duration-[var(--duration-fast)] ${
             isExpanded ? 'rotate-90' : ''
           }`}
         >
@@ -261,7 +261,7 @@ export const DiffFileRow = ({
               {dir}
             </span>
             <span className="shrink-0 text-center" style={{ width: colWidths.state }}>
-              <span className="inline-block rounded-[3px] bg-bg-surface px-1.5 py-[1px] text-[9px] text-text-ghost">
+              <span className="inline-block rounded-[3px] bg-bg-surface px-1.5 py-[1px] text-[10px] text-text-tertiary">
                 unstaged
               </span>
             </span>
@@ -332,11 +332,11 @@ export const DiffFileRow = ({
           onClick={(e) => {
             void handleOpenFullDiff(e);
           }}
-          className="ml-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+          className="ml-0.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
         >
           <svg
-            width="9"
-            height="9"
+            width="11"
+            height="11"
             viewBox="0 0 9 9"
             fill="none"
             stroke="currentColor"
@@ -361,10 +361,10 @@ export const DiffFileRow = ({
         <button
           title={isReviewed ? 'Mark as unreviewed' : 'Mark as reviewed'}
           onClick={handleReviewToggle}
-          className={`ml-0.5 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
+          className={`ml-0.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[10px] transition-all duration-[var(--duration-fast)] ${
             isReviewed
               ? 'border-[var(--color-clean)] bg-[var(--color-clean)] text-[var(--bg-void)]'
-              : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
+              : 'border-border-default bg-transparent text-text-tertiary hover:border-border-strong hover:text-text-secondary'
           }`}
         >
           {isReviewed ? '\u2713' : '\u25cb'}
@@ -376,9 +376,9 @@ export const DiffFileRow = ({
             <button
               title="More actions"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-              className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+              className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
             >
-              <svg width="9" height="3" viewBox="0 0 9 3" fill="currentColor">
+              <svg width="11" height="3" viewBox="0 0 9 3" fill="currentColor">
                 <circle cx="1.5" cy="1.5" r="1" /><circle cx="4.5" cy="1.5" r="1" /><circle cx="7.5" cy="1.5" r="1" />
               </svg>
             </button>
@@ -471,10 +471,10 @@ const StageToggle = ({
       onClick={(e) => {
         void handleClick(e);
       }}
-      className={`ml-1 flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
+      className={`ml-1 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border text-[10px] transition-all duration-[var(--duration-fast)] ${
         staged
           ? 'border-phase-execute bg-phase-execute text-bg-void hover:brightness-90'
-          : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
+          : 'border-border-default bg-transparent text-text-tertiary hover:border-border-strong hover:text-text-secondary'
       }`}
     >
       {staged ? '\u2713' : '+'}

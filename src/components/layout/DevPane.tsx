@@ -273,7 +273,7 @@ export const DevPane = (): React.JSX.Element => {
           <button
             ref={launchButtonRef}
             onClick={() => setLaunchMenuOpen((prev) => !prev)}
-            className="cursor-pointer rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent px-2.5 py-[3px] font-mono text-[10px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-solid hover:border-phase-execute hover:bg-[var(--phase-execute-glow)] hover:text-phase-execute"
+            className="cursor-pointer rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent px-2.5 py-[3px] font-mono text-[11px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-solid hover:border-phase-execute hover:bg-[var(--phase-execute-glow)] hover:text-phase-execute"
           >
             + launch
           </button>

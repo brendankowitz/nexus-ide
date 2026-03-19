@@ -147,7 +147,7 @@ export const AgentCard = ({
             {onKill !== undefined && session.status === 'running' && (
               <button
                 onClick={(e) => { e.stopPropagation(); onKill(); }}
-                className="flex h-3.5 w-3.5 cursor-pointer items-center justify-center rounded-[2px] font-mono text-[9px] text-text-ghost transition-colors hover:bg-[var(--color-danger)] hover:text-white"
+                className="flex h-4 w-4 cursor-pointer items-center justify-center rounded-[2px] font-mono text-[10px] text-text-tertiary transition-colors hover:bg-[var(--color-danger)] hover:text-white"
                 title="Kill"
               >
                 ×

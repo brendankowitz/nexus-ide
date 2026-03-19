@@ -218,7 +218,7 @@ export const CommitDetailPanel = ({
             <button
               onClick={handleCopyHash}
               title="Copy full hash"
-              className="relative flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+              className="relative flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
             >
               {copied ? (
                 <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

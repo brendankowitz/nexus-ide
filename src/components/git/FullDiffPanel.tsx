@@ -112,7 +112,7 @@ export const FullDiffPanel = ({ file, hunks, activeProjectId, onClose }: FullDif
         <div className="flex shrink-0 items-center gap-2.5 border-b border-border-subtle px-5 py-3">
           {/* Status badge */}
           <span
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] font-mono text-[10px] font-bold ${statusStyles[file.status] ?? ''}`}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] font-mono text-[10px] font-bold ${statusStyles[file.status] ?? ''}`}
           >
             {file.status}
           </span>

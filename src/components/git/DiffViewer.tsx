@@ -10,7 +10,7 @@ import type { DiffFile, DiffHunk as DiffHunkType, DiffViewMode } from '@/types';
 // ── SVG Icons for View Mode Toggle ───────────────
 
 const ListIcon = (): React.JSX.Element => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
     <line x1="1" y1="2.5" x2="11" y2="2.5" />
     <line x1="1" y1="6" x2="11" y2="6" />
     <line x1="1" y1="9.5" x2="11" y2="9.5" />
@@ -21,7 +21,7 @@ const ListIcon = (): React.JSX.Element => (
 );
 
 const TreeIcon = (): React.JSX.Element => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
     <line x1="2" y1="1.5" x2="2" y2="10.5" />
     <line x1="2" y1="3" x2="6" y2="3" />
     <line x1="2" y1="6" x2="6" y2="6" />
@@ -35,7 +35,7 @@ const TreeIcon = (): React.JSX.Element => (
 );
 
 const GroupsIcon = (): React.JSX.Element => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="1" y="1" width="4.5" height="4.5" rx="1" />
     <rect x="6.5" y="1" width="4.5" height="4.5" rx="1" />
     <rect x="1" y="6.5" width="4.5" height="4.5" rx="1" />
@@ -96,7 +96,7 @@ const ViewModeToggle = ({ mode, onChange }: ViewModeToggleProps): React.JSX.Elem
         key={key}
         title={label}
         onClick={() => onChange(key)}
-        className={`flex h-[22px] w-[26px] cursor-pointer items-center justify-center transition-colors duration-[var(--duration-fast)] ${
+        className={`flex h-[26px] w-[30px] cursor-pointer items-center justify-center transition-colors duration-[var(--duration-fast)] ${
           mode === key
             ? 'bg-bg-active text-text-primary'
             : 'bg-transparent text-text-ghost hover:text-text-secondary'
@@ -311,7 +311,7 @@ export const DiffViewer = (): React.JSX.Element => {
           <button
             title={allSelected ? 'Deselect all' : 'Select all'}
             onClick={handleToggleSelectAll}
-            className={`flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[2px] border text-[8px] transition-all duration-[var(--duration-fast)] ${
+            className={`flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-[2px] border text-[9px] transition-all duration-[var(--duration-fast)] ${
               allSelected
                 ? 'border-phase-execute bg-phase-execute text-bg-void'
                 : selectedFiles.size > 0
@@ -345,10 +345,10 @@ export const DiffViewer = (): React.JSX.Element => {
           <button
             title={hideReviewed ? 'Show reviewed files' : 'Hide reviewed files'}
             onClick={() => setHideReviewed((h) => !h)}
-            className={`cursor-pointer rounded-[var(--radius-sm)] border px-1.5 py-0.5 font-mono text-[9px] transition-all duration-[var(--duration-fast)] ${
+            className={`cursor-pointer rounded-[var(--radius-sm)] border px-1.5 py-1 font-mono text-[10px] transition-all duration-[var(--duration-fast)] ${
               hideReviewed
                 ? 'border-[var(--color-clean)] bg-[var(--color-clean)] text-[var(--bg-void)]'
-                : 'border-border-default bg-transparent text-text-ghost hover:border-border-strong hover:text-text-secondary'
+                : 'border-border-default bg-transparent text-text-tertiary hover:border-border-strong hover:text-text-secondary'
             }`}
           >
             hide reviewed
@@ -410,7 +410,7 @@ const DiffButton = ({
 }: DiffButtonProps): React.JSX.Element => (
   <button
     onClick={() => { void (onClick as () => Promise<void> | void)(); }}
-    className={`cursor-pointer rounded-[var(--radius-sm)] border px-2.5 py-1 font-mono text-[10px] font-medium transition-all duration-[var(--duration-fast)] ${
+    className={`cursor-pointer rounded-[var(--radius-sm)] border px-2.5 py-1.5 font-mono text-[11px] font-medium transition-all duration-[var(--duration-fast)] ${
       primary
         ? 'border-phase-execute bg-phase-execute font-semibold text-[var(--bg-void)] hover:brightness-110'
         : 'border-border-strong bg-transparent text-text-secondary hover:bg-bg-active hover:text-text-primary'

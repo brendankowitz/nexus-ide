@@ -121,13 +121,13 @@ const ForcePushConfirm = ({
     <button
       onClick={onConfirm}
       disabled={busy}
-      className="cursor-pointer rounded-[var(--radius-sm)] border border-[var(--color-danger)] px-2 py-0.5 font-mono text-[9px] text-[var(--color-danger)] transition-colors hover:bg-[#f8514910] disabled:opacity-40"
+      className="cursor-pointer rounded-[var(--radius-sm)] border border-[var(--color-danger)] px-2 py-1 font-mono text-[10px] text-[var(--color-danger)] transition-colors hover:bg-[#f8514910] disabled:opacity-40"
     >
       {busy ? 'pushing…' : 'force push?'}
     </button>
     <button
       onClick={onCancel}
-      className="cursor-pointer font-mono text-[9px] text-text-ghost hover:text-text-tertiary"
+      className="cursor-pointer font-mono text-[10px] text-text-ghost hover:text-text-tertiary"
     >
       cancel
     </button>
@@ -255,16 +255,16 @@ export const BranchList = (): React.JSX.Element => {
           <button
             onClick={handleExpandAll}
             title="expand all"
-            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[9px] text-text-ghost transition-colors hover:text-text-secondary"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
           >▾▾</button>
           <button
             onClick={handleCollapseAll}
             title="collapse all"
-            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[9px] text-text-ghost transition-colors hover:text-text-secondary"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
           >▸▸</button>
           <button
             onClick={() => { setShowForm((v) => !v); setCreateError(null); }}
-            className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-plan px-2 py-0.5 font-mono text-[10px] text-phase-plan transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-plan-glow)]"
+            className="cursor-pointer rounded-[var(--radius-sm)] border border-phase-plan px-2 py-1 font-mono text-[11px] text-phase-plan transition-colors duration-[var(--duration-fast)] hover:bg-[var(--phase-plan-glow)]"
           >
             + new
           </button>
@@ -344,7 +344,7 @@ export const BranchList = (): React.JSX.Element => {
             <button
               onClick={(e) => { e.stopPropagation(); void handleFetchAll(); }}
               disabled={fetchingAll}
-              className="flex cursor-pointer items-center gap-1 rounded-[var(--radius-sm)] border border-border-strong px-2 py-0.5 font-mono text-[9px] text-text-tertiary transition-colors hover:border-phase-execute hover:text-phase-execute disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-1 rounded-[var(--radius-sm)] border border-border-strong px-2 py-1 font-mono text-[10px] text-text-tertiary transition-colors hover:border-phase-execute hover:text-phase-execute disabled:opacity-40"
             >
               {fetchingAll
                 ? <span className="flex items-center gap-1"><span className="h-2 w-2 animate-spin rounded-full border border-current border-t-transparent" />fetching…</span>
@@ -745,7 +745,7 @@ const BranchRow = ({
               <button
                 ref={menuBtnRef}
                 onClick={openMenu}
-                className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-1.5 py-0.5 font-mono text-[10px] text-text-secondary transition-all hover:bg-bg-active hover:text-text-primary"
+                className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-1.5 py-1 font-mono text-[11px] text-text-secondary transition-all hover:bg-bg-active hover:text-text-primary"
               >
                 ···
               </button>
@@ -756,8 +756,8 @@ const BranchRow = ({
         {/* Rename confirm/cancel */}
         {renaming && (
           <div className="flex shrink-0 gap-1">
-            <button onClick={() => void confirmRename()} className="cursor-pointer rounded-[var(--radius-sm)] bg-phase-plan px-2 py-0.5 font-mono text-[9px] text-bg-void">✓</button>
-            <button onClick={() => setRenaming(false)} className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-2 py-0.5 font-mono text-[9px] text-text-tertiary hover:text-text-secondary">✕</button>
+            <button onClick={() => void confirmRename()} className="cursor-pointer rounded-[var(--radius-sm)] bg-phase-plan px-2 py-1 font-mono text-[10px] text-bg-void">✓</button>
+            <button onClick={() => setRenaming(false)} className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-2 py-1 font-mono text-[10px] text-text-tertiary hover:text-text-secondary">✕</button>
           </div>
         )}
       </div>
@@ -791,7 +791,7 @@ const PrimaryBtn = ({
   <button
     onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
     disabled={disabled}
-    className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-1.5 py-0.5 font-mono text-[10px] text-text-secondary transition-all duration-[var(--duration-fast)] hover:bg-bg-active hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+    className="cursor-pointer rounded-[var(--radius-sm)] border border-border-strong px-1.5 py-1 font-mono text-[11px] text-text-secondary transition-all duration-[var(--duration-fast)] hover:bg-bg-active hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
   >
     {label}
   </button>

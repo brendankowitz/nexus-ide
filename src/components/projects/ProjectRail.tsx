@@ -95,7 +95,7 @@ const GroupHeader = ({ group, autoRename, onToggle, onRename, onDelete }: GroupH
             e.stopPropagation();
             setShowMenu((v) => !v);
           }}
-          className="flex h-4 w-4 items-center justify-center rounded text-[11px] text-text-ghost opacity-0 group-hover/header:opacity-100 hover:text-text-tertiary hover:bg-bg-hover transition-all"
+          className="flex h-5 w-5 items-center justify-center rounded text-[11px] text-text-tertiary opacity-0 group-hover/header:opacity-100 hover:text-text-secondary hover:bg-bg-hover transition-all"
           title="Group options"
         >
           ⋯
@@ -234,7 +234,7 @@ export const ProjectRail = (): React.JSX.Element => {
             {/* Add group button */}
             <button
               onClick={handleAddGroup}
-              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[11px] text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
+              className="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[11px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
               title="New group"
             >
               ⊞
@@ -242,7 +242,7 @@ export const ProjectRail = (): React.JSX.Element => {
             {/* Add project button */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[12px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
+              className="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[12px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
               title="Add project"
             >
               +
@@ -330,10 +330,10 @@ export const ProjectRail = (): React.JSX.Element => {
           <button
             onClick={() => setSettingsModalOpen(true)}
             title="Settings (Ctrl+,)"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-text-ghost transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover hover:text-text-secondary"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover hover:text-text-secondary"
           >
             <GearIcon />
-            <span className="font-mono text-[10px]">settings</span>
+            <span className="font-mono text-[11px]">settings</span>
           </button>
         </div>
       </div>

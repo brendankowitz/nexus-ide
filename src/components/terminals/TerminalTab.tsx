@@ -187,7 +187,7 @@ const TerminalHeader = ({ sessionId, onKill }: TerminalHeaderProps): React.JSX.E
           <button
             title="Kill session"
             tabIndex={-1}
-            className="ml-1 cursor-default font-mono text-[13px] leading-none text-text-ghost transition-colors hover:text-[var(--color-danger)]"
+            className="ml-1 cursor-default font-mono text-[13px] leading-none text-text-tertiary transition-colors hover:text-[var(--color-danger)]"
             onClick={(e) => { e.stopPropagation(); onKill(); }}
           >
             ×
