@@ -87,9 +87,13 @@ export function augmentPathFromSystem(): void {
   if (process.platform === 'win32') {
     try {
       const appPath = app.getAppPath();
+      // In packaged builds app.getAppPath() returns the .asar path. Electron's
+      // patched fs treats .asar as a virtual filesystem so existsSync returns true
+      // for paths inside it — but executables inside .asar cannot be spawned.
+      // Always resolve to the real on-disk path: .asar → .asar.unpacked.
+      const realBase = appPath.endsWith('.asar') ? appPath + '.unpacked' : appPath;
       const dugiteCandidates = [
-        join(appPath, 'node_modules', 'dugite', 'git', 'cmd'),              // dev
-        join(appPath + '.unpacked', 'node_modules', 'dugite', 'git', 'cmd'), // packaged (asarUnpack)
+        join(realBase, 'node_modules', 'dugite', 'git', 'cmd'),
       ];
       for (const candidate of dugiteCandidates) {
         if (existsSync(join(candidate, 'git.exe'))) {
@@ -114,12 +118,13 @@ export function augmentPathFromSystem(): void {
   if (process.platform === 'win32' && !process.env['CLAUDE_CODE_GIT_BASH_PATH']) {
     const bashCandidates: string[] = [];
 
-    // 1. dugite's sh.exe (it IS GNU bash — confirmed via --version probe)
+    // 1. dugite's sh.exe — must use the real on-disk path (.asar.unpacked),
+    //    never the virtual .asar path (Electron patches existsSync to see inside
+    //    .asar, but spawn cannot execute files from within it).
     try {
       const appPath = app.getAppPath();
-      for (const base of [appPath, appPath + '.unpacked']) {
-        bashCandidates.push(join(base, 'node_modules', 'dugite', 'git', 'usr', 'bin', 'sh.exe'));
-      }
+      const realBase = appPath.endsWith('.asar') ? appPath + '.unpacked' : appPath;
+      bashCandidates.push(join(realBase, 'node_modules', 'dugite', 'git', 'usr', 'bin', 'sh.exe'));
     } catch { /* app not ready */ }
 
     // 2. bash.exe / sh.exe in current PATH entries
