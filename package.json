@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "package:win": "electron-builder --win --publish never",
-    "postinstall": "patch-package"
+    "postinstall": "node -e \"if(process.platform==='win32')require('child_process').execSync('patch-package',{stdio:'inherit'})\""
   },
   "dependencies": {
     "@lydell/node-pty": "^1.2.0-beta.3",
