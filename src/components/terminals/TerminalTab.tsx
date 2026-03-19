@@ -309,12 +309,17 @@ export const TerminalTab = ({
       api?.write(sessionId, data);
     });
 
-    // Right-click: copy selection before xterm clears it, suppress native menu
+    // Right-click: Windows console behaviour — copy if text selected, paste if not
     const handleContextMenu = (e: MouseEvent): void => {
+      e.preventDefault();
       const selection = term.getSelection();
       if (selection) {
-        e.preventDefault();
         void navigator.clipboard.writeText(selection);
+        term.clearSelection();
+      } else {
+        void navigator.clipboard.readText().then((text) => {
+          if (text) api?.write(sessionId, text);
+        });
       }
     };
     container.addEventListener('contextmenu', handleContextMenu);
