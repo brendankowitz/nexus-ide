@@ -140,7 +140,7 @@ export const FullDiffPanel = ({ file, hunks, activeProjectId, onClose }: FullDif
           <button
             onClick={onClose}
             title="Close full diff"
-            className="ml-1 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-ghost transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
+            className="ml-1 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-[3px] border border-border-default bg-transparent text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-border-strong hover:text-text-primary"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <line x1="1" y1="1" x2="9" y2="9" />

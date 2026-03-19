@@ -127,7 +127,7 @@ const ForcePushConfirm = ({
     </button>
     <button
       onClick={onCancel}
-      className="cursor-pointer font-mono text-[10px] text-text-ghost hover:text-text-tertiary"
+      className="cursor-pointer font-mono text-[10px] text-text-tertiary hover:text-text-secondary"
     >
       cancel
     </button>
@@ -255,12 +255,12 @@ export const BranchList = (): React.JSX.Element => {
           <button
             onClick={handleExpandAll}
             title="expand all"
-            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-1 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
           >▾▾</button>
           <button
             onClick={handleCollapseAll}
             title="collapse all"
-            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
+            className="cursor-pointer rounded-[var(--radius-sm)] px-1.5 py-1 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary"
           >▸▸</button>
           <button
             onClick={() => { setShowForm((v) => !v); setCreateError(null); }}
@@ -283,7 +283,7 @@ export const BranchList = (): React.JSX.Element => {
         />
         {filter && (
           <button onClick={() => setFilter('')}
-            className="cursor-pointer font-mono text-[11px] text-text-ghost transition-colors hover:text-text-secondary">
+            className="cursor-pointer font-mono text-[11px] text-text-tertiary transition-colors hover:text-text-secondary">
             ×
           </button>
         )}
@@ -305,11 +305,11 @@ export const BranchList = (): React.JSX.Element => {
           {createError !== null && <p className="font-mono text-[10px] text-[var(--color-danger)]">{createError}</p>}
           <div className="flex gap-2">
             <button onClick={() => void handleCreate()} disabled={creating || !newBranchName.trim()}
-              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-plan px-2 py-1 font-mono text-[10px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40">
+              className="flex-1 cursor-pointer rounded-[var(--radius-sm)] bg-phase-plan px-2 py-1 font-mono text-[11px] font-medium text-bg-void disabled:cursor-not-allowed disabled:opacity-40">
               {creating ? 'creating…' : 'create'}
             </button>
             <button onClick={() => { setShowForm(false); setNewBranchName(''); setCreateError(null); }}
-              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary">
+              className="cursor-pointer rounded-[var(--radius-sm)] border border-border-default px-2 py-1 font-mono text-[11px] text-text-tertiary transition-colors hover:text-text-secondary">
               cancel
             </button>
           </div>
@@ -323,7 +323,7 @@ export const BranchList = (): React.JSX.Element => {
         {hiddenCount > 0 && !filterLc && (
           <div className="border-t border-border-subtle px-5 py-2">
             <button onClick={() => setShowWorktreeBranches((v) => !v)}
-              className="cursor-pointer font-mono text-[11px] text-text-tertiary transition-colors hover:text-text-secondary">
+              className="cursor-pointer font-mono text-[10px] text-text-tertiary transition-colors hover:text-text-secondary">
               {showWorktreeBranches ? 'hide worktree branches' : `${hiddenCount} in worktrees — show`}
             </button>
           </div>
