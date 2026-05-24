@@ -75,6 +75,27 @@
 }
 
 /* ═══════════════════════════════════════════════════
+   NEXUS v2 WARM PALETTE — used by kanban + new components
+   ═══════════════════════════════════════════════════ */
+:root {
+  --v2-bg0: #0e1115;
+  --v2-bg1: #13171c;
+  --v2-bg2: #181d24;
+  --v2-bg3: #202732;
+  --v2-border: #252b35;
+  --v2-border-soft: #1e242d;
+  --v2-text: #e6e7ea;
+  --v2-text-dim: #a8aeb8;
+  --v2-text-faint: #6c7280;
+  --v2-amber: #d97757;
+  --v2-amber-dim: #8b4a2a;
+  --v2-green: #5fb47a;
+  --v2-blue: #7c9cff;
+  --v2-red: #e26b6b;
+  --v2-yellow: #e6c168;
+}
+
+/* ═══════════════════════════════════════════════════
    TAILWIND v4 THEME INTEGRATION
    ═══════════════════════════════════════════════════ */
 @theme {
@@ -128,6 +149,23 @@
   /* Fonts */
   --font-family-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Fira Code', monospace;
   --font-family-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* v2 warm palette */
+  --color-v2-bg0: var(--v2-bg0);
+  --color-v2-bg1: var(--v2-bg1);
+  --color-v2-bg2: var(--v2-bg2);
+  --color-v2-bg3: var(--v2-bg3);
+  --color-v2-border: var(--v2-border);
+  --color-v2-border-soft: var(--v2-border-soft);
+  --color-v2-text: var(--v2-text);
+  --color-v2-text-dim: var(--v2-text-dim);
+  --color-v2-text-faint: var(--v2-text-faint);
+  --color-v2-amber: var(--v2-amber);
+  --color-v2-amber-dim: var(--v2-amber-dim);
+  --color-v2-green: var(--v2-green);
+  --color-v2-blue: var(--v2-blue);
+  --color-v2-red: var(--v2-red);
+  --color-v2-yellow: var(--v2-yellow);
 }
 
 /* ═══════════════════════════════════════════════════
