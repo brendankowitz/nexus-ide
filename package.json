@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "package:win": "electron-builder --win --publish never",
+    "package:mac": "electron-builder --mac --publish never",
     "postinstall": "node -e \"if(process.platform==='win32')require('child_process').execSync('patch-package',{stdio:'inherit'})\""
   },
   "dependencies": {
