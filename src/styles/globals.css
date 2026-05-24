@@ -246,3 +246,8 @@ body::after {
     transform: translateX(0);
   }
 }
+
+@keyframes kanbanPulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
+}
