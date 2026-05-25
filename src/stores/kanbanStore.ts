@@ -59,7 +59,7 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
 
     addCard: (card) =>
       set((state) => {
-        state.cards.push(card);
+        state.cards.push({ ...card });
       }),
 
     move: (cardId, lane) =>
@@ -85,7 +85,8 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
 
     removeCard: (cardId) =>
       set((state) => {
-        state.cards = state.cards.filter((c) => c.id !== cardId);
+        const idx = state.cards.findIndex((c) => c.id === cardId);
+        if (idx !== -1) state.cards.splice(idx, 1);
       }),
 
     cardsForLane: (lane) => get().cards.filter((c) => c.lane === lane),
