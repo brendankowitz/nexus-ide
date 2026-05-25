@@ -9,7 +9,6 @@ const LANES: KanbanLane[] = ['backlog', 'planning', 'executing', 'review', 'done
 
 export const KanbanBoard = (): React.JSX.Element => {
   const cards = useKanbanStore((s) => s.cards);
-  const cardsForLane = useKanbanStore((s) => s.cardsForLane);
   const move = useKanbanStore((s) => s.move);
   const seedCards = useKanbanStore((s) => s.seedCards);
 
@@ -48,7 +47,7 @@ export const KanbanBoard = (): React.JSX.Element => {
           <KanbanLaneCmp
             key={lane}
             id={lane}
-            cards={cardsForLane(lane)}
+            cards={cards.filter((c) => c.lane === lane)}
             draggingId={draggingId}
             onDragStart={(id) => setDraggingId(id)}
             onDragEnd={() => setDraggingId(null)}

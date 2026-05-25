@@ -2,7 +2,8 @@ import { useKanbanStore } from '@/stores/kanbanStore';
 import { PROVIDERS } from '@/components/shared/ProviderPicker';
 
 export const RunsStrip = (): React.JSX.Element => {
-  const liveCards = useKanbanStore((s) => s.liveCards());
+  const cards = useKanbanStore((s) => s.cards);
+  const liveCards = cards.filter((c) => c.lane === 'executing' || c.lane === 'review');
 
   return (
     <div className="shrink-0 border-b border-[var(--v2-border)] bg-[var(--v2-bg1)] px-3.5 py-2.5">
