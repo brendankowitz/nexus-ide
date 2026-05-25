@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { useProjectStore, selectActiveProject, selectActiveWorktrees } from '@/stores/projectStore';
 import { useToastStore } from '@/stores/toastStore';
+import { useUIStore } from '@/stores/uiStore';
 import { AgentCard, LaunchAgentCard } from '@/components/terminals/AgentCard';
 import { TerminalTab } from '@/components/terminals/TerminalTab';
 import { LaunchMenu } from '@/components/terminals/LaunchMenu';
@@ -127,6 +128,16 @@ export const DevPane = (): React.JSX.Element => {
       subscribedRef.current.clear();
     };
   }, [sessions, updateSession]);
+
+  // Switch to the focused session when dispatched from the kanban board
+  const focusedSessionId = useUIStore((s) => s.focusedSessionId);
+  const setFocusedSessionId = useUIStore((s) => s.setFocusedSessionId);
+  useEffect(() => {
+    if (focusedSessionId !== null) {
+      setActiveSession(focusedSessionId);
+      setFocusedSessionId(null);
+    }
+  }, [focusedSessionId, setActiveSession, setFocusedSessionId]);
 
   const handleLaunch = useCallback(
     async (option: { label: string; command?: string; args?: string[]; worktreePath?: string }) => {
