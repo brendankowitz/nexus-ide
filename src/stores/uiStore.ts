@@ -15,6 +15,7 @@ interface UIState {
   lastKeyPressed: string | null;
   activeMode: AppMode;
   activeProvider: ProviderId;
+  focusedSessionId: string | null;
 }
 
 interface UIActions {
@@ -34,6 +35,7 @@ interface UIActions {
   purgeStaleReviews: (currentFiles: Array<{ filePath: string; signature: string }>) => void;
   setActiveMode: (mode: AppMode) => void;
   setActiveProvider: (provider: ProviderId) => void;
+  setFocusedSessionId: (id: string | null) => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -48,6 +50,7 @@ const initialState = {
   lastKeyPressed: null,
   activeMode: 'workbench' as AppMode,
   activeProvider: 'claude' as ProviderId,
+  focusedSessionId: null,
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -140,6 +143,11 @@ export const useUIStore = create<UIStore>()(
     setActiveProvider: (provider) =>
       set((state) => {
         state.activeProvider = provider;
+      }),
+
+    setFocusedSessionId: (id) =>
+      set((state) => {
+        state.focusedSessionId = id;
       }),
   }))
 );

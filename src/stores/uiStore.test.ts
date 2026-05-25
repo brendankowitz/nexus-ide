@@ -5,6 +5,7 @@ beforeEach(() => {
   useUIStore.setState({
     activeMode: 'workbench',
     activeProvider: 'claude',
+    focusedSessionId: null,
   } as any);
 });
 
@@ -35,5 +36,22 @@ describe('activeProvider', () => {
   it('setActiveProvider updates the provider', () => {
     useUIStore.getState().setActiveProvider('copilot');
     expect(useUIStore.getState().activeProvider).toBe('copilot');
+  });
+});
+
+describe('focusedSessionId', () => {
+  it('defaults to null', () => {
+    expect(useUIStore.getState().focusedSessionId).toBeNull();
+  });
+
+  it('setFocusedSessionId stores a session id', () => {
+    useUIStore.getState().setFocusedSessionId('sess-abc');
+    expect(useUIStore.getState().focusedSessionId).toBe('sess-abc');
+  });
+
+  it('setFocusedSessionId can be cleared to null', () => {
+    useUIStore.getState().setFocusedSessionId('sess-abc');
+    useUIStore.getState().setFocusedSessionId(null);
+    expect(useUIStore.getState().focusedSessionId).toBeNull();
   });
 });
