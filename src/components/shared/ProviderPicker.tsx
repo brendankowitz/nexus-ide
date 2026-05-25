@@ -1,12 +1,13 @@
+import { useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import type { ProviderId } from '@/stores/uiStore';
 
 const PROVIDERS: { id: ProviderId; short: string; label: string; tint: string }[] = [
-  { id: 'claude',  short: 'CC', label: 'Claude Code',   tint: '#d97757' },
-  { id: 'copilot', short: 'GH', label: 'Copilot CLI',   tint: '#7c8cff' },
-  { id: 'codex',   short: 'CX', label: 'Codex',         tint: '#10a37f' },
-  { id: 'gemini',  short: 'GM', label: 'Gemini',        tint: '#4a90ff' },
-  { id: 'custom',  short: '··', label: 'Custom CLI',    tint: '#9aa0a8' },
+  { id: 'claude',  short: 'CC', label: 'Claude Code',  tint: '#d97757' },
+  { id: 'copilot', short: 'GH', label: 'Copilot CLI',  tint: '#7c8cff' },
+  { id: 'codex',   short: 'CX', label: 'Codex',        tint: '#10a37f' },
+  { id: 'gemini',  short: 'GM', label: 'Gemini',       tint: '#4a90ff' },
+  { id: 'custom',  short: '··', label: 'Custom CLI',   tint: '#9aa0a8' },
 ];
 
 export { PROVIDERS };
@@ -19,6 +20,23 @@ export const ProviderPicker = ({ className }: ProviderPickerProps): React.JSX.El
   const activeProvider = useUIStore((s) => s.activeProvider);
   const setActiveProvider = useUIStore((s) => s.setActiveProvider);
 
+  // Load persisted provider on first mount
+  useEffect(() => {
+    window.nexusAPI.settings.get().then((s) => {
+      const saved = s['ui.activeProvider'] as ProviderId | undefined;
+      if (saved !== undefined) setActiveProvider(saved);
+    }).catch(() => {
+      // settings unavailable in tests or before preload — ignore
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSelect = (id: ProviderId) => {
+    setActiveProvider(id);
+    window.nexusAPI.settings.set({ 'ui.activeProvider': id }).catch(() => {
+      // ignore persistence errors
+    });
+  };
+
   return (
     <div
       className={`flex gap-0.5 rounded-md border border-[var(--v2-border)] bg-[var(--v2-bg2)] p-0.5 ${className ?? ''}`}
@@ -28,8 +46,8 @@ export const ProviderPicker = ({ className }: ProviderPickerProps): React.JSX.El
         return (
           <button
             key={p.id}
-            title={`${p.label}`}
-            onClick={() => setActiveProvider(p.id)}
+            title={p.label}
+            onClick={() => handleSelect(p.id)}
             style={active ? { background: p.tint, color: '#0e1115' } : undefined}
             className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-100 [-webkit-app-region:no-drag] ${
               active
