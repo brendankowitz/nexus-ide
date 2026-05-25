@@ -18,7 +18,7 @@ interface DispatchPanelProps {
 }
 
 export const DispatchPanel = ({
-  lane,
+  lane: _lane,
   existingCardId,
   initialTitle = '',
   onClose,
@@ -74,35 +74,45 @@ export const DispatchPanel = ({
 
     try {
       const run = await window.nexusAPI.pipeline.create(activeProject.id, config);
-      await window.nexusAPI.pipeline.start(run.id, 'execute');
 
-      // Link card to run (sessionId may arrive later via onUpdate)
-      linkRun(cardId, run.id, run.phases.execute?.terminalSessionId ?? '');
-      move(cardId, 'executing');
-
-      // Subscribe to pipeline updates for this run
+      // Subscribe BEFORE start() so we never miss events
       const capturedCardId = cardId;
       const unsub = window.nexusAPI.pipeline.onUpdate(run.id, (update: PipelineUpdate) => {
-        // Capture sessionId once the execute phase starts
-        if (update.type === 'phase-start' && update.phase === 'execute') {
-          const sid = update.result?.terminalSessionId;
-          if (sid) linkRun(capturedCardId, run.id, sid);
-        }
-        if (update.type === 'complete') {
-          move(capturedCardId, 'review');
-          unsub();
-        }
-        if (update.type === 'error') {
-          setCardError(capturedCardId, update.data ?? 'Agent failed');
-          move(capturedCardId, 'review');
+        try {
+          if (update.type === 'phase-start' && update.phase === 'execute') {
+            const sid = update.result?.terminalSessionId;
+            if (sid) {
+              linkRun(capturedCardId, run.id, sid);
+            } else {
+              console.warn('[DispatchPanel] phase-start received without terminalSessionId', { runId: run.id, cardId: capturedCardId });
+            }
+          }
+          if (update.type === 'complete') {
+            move(capturedCardId, 'review');
+            unsub();
+          }
+          if (update.type === 'error') {
+            setCardError(capturedCardId, update.data ?? 'Agent failed');
+            move(capturedCardId, 'review');
+            unsub();
+          }
+        } catch (callbackErr) {
+          console.error('[DispatchPanel] pipeline update handler threw', callbackErr, { runId: run.id, cardId: capturedCardId });
           unsub();
         }
       });
+
+      await window.nexusAPI.pipeline.start(run.id, 'execute');
+
+      // Link card to run (sessionId may arrive later via phase-start onUpdate)
+      linkRun(cardId, run.id, run.phases.execute?.terminalSessionId ?? '');
+      move(cardId, 'executing');
 
       setLoading(false);
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error('[DispatchPanel] dispatch failed', { cardId, projectId: activeProject?.id }, err);
       setCardError(cardId, msg);
       if (existingCardId === undefined) {
         move(cardId, 'review');
