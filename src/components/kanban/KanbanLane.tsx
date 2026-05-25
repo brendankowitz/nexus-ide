@@ -16,6 +16,8 @@ interface KanbanLaneProps {
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   onDrop: (lane: LaneId) => void;
+  onAdd: () => void;
+  onCardDispatch: (cardId: string, title: string) => void;
 }
 
 export const KanbanLane = ({
@@ -25,6 +27,8 @@ export const KanbanLane = ({
   onDragStart,
   onDragEnd,
   onDrop,
+  onAdd,
+  onCardDispatch,
 }: KanbanLaneProps): React.JSX.Element => {
   const meta = LANE_META[id];
 
@@ -44,6 +48,13 @@ export const KanbanLane = ({
           {meta.label}
         </span>
         <span className="font-mono text-[10px] text-[var(--v2-text-faint)]">{cards.length}</span>
+        <button
+          onClick={onAdd}
+          className="ml-auto font-mono text-[14px] leading-none text-[var(--v2-text-faint)] hover:text-[var(--v2-text)] [-webkit-app-region:no-drag]"
+          title="Dispatch new task"
+        >
+          +
+        </button>
       </div>
 
       {/* Scrollable card list */}
@@ -55,6 +66,7 @@ export const KanbanLane = ({
             dragging={draggingId === card.id}
             onDragStart={() => onDragStart(card.id)}
             onDragEnd={onDragEnd}
+            onDispatch={() => onCardDispatch(card.id, card.title)}
           />
         ))}
         {cards.length === 0 && (
