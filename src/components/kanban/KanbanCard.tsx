@@ -1,3 +1,4 @@
+import { useUIStore } from '@/stores/uiStore';
 import type { KanbanCard as KanbanCardType } from '@/stores/kanbanStore';
 import { PROVIDERS } from '@/components/shared/ProviderPicker';
 
@@ -6,6 +7,7 @@ interface KanbanCardProps {
   dragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onDispatch: () => void;
 }
 
 export const KanbanCard = ({
@@ -13,9 +15,17 @@ export const KanbanCard = ({
   dragging,
   onDragStart,
   onDragEnd,
+  onDispatch,
 }: KanbanCardProps): React.JSX.Element => {
   const provider = PROVIDERS.find((p) => p.id === card.provider) ?? PROVIDERS[0];
   const isExecuting = card.lane === 'executing';
+  const canDispatch = card.lane === 'backlog' || card.lane === 'planning';
+
+  const handleViewInTerminal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    useUIStore.getState().setFocusedSessionId(card.sessionId ?? null);
+    useUIStore.getState().setActiveMode('workbench');
+  };
 
   return (
     <div
@@ -58,6 +68,36 @@ export const KanbanCard = ({
             className="h-full w-[70%] animate-[kanbanPulse_2.4s_ease-in-out_infinite]"
           />
         </div>
+      )}
+
+      {/* Error badge */}
+      {card.error !== undefined && (
+        <div
+          className="mt-1.5 truncate font-mono text-[9.5px] text-[var(--v2-red)]"
+          title={card.error}
+        >
+          ⚠ {card.error}
+        </div>
+      )}
+
+      {/* View in terminal — only for executing cards that have a session */}
+      {isExecuting && card.sessionId !== undefined && card.sessionId !== '' && (
+        <button
+          onClick={handleViewInTerminal}
+          className="mt-1.5 w-full text-left font-mono text-[10px] text-[var(--v2-text-faint)] hover:text-[var(--v2-amber)] [-webkit-app-region:no-drag]"
+        >
+          View in terminal →
+        </button>
+      )}
+
+      {/* Dispatch button — only for backlog/planning cards */}
+      {canDispatch && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDispatch(); }}
+          className="mt-1.5 w-full text-left font-mono text-[10px] text-[var(--v2-text-faint)] hover:text-[var(--v2-amber)] [-webkit-app-region:no-drag]"
+        >
+          Dispatch →
+        </button>
       )}
     </div>
   );
