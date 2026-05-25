@@ -18,6 +18,8 @@ const GROUPS: Group[] = [
 
 export const AgentsInbox = (): React.JSX.Element => {
   const cards = useKanbanStore((s) => s.cards);
+  const move = useKanbanStore((s) => s.move);
+  const removeCard = useKanbanStore((s) => s.removeCard);
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--v2-bg0)] px-5 py-4">
@@ -72,13 +74,22 @@ export const AgentsInbox = (): React.JSX.Element => {
                     {/* Needs-input actions */}
                     {group.id === 'needs' && (
                       <div className="flex gap-1.5">
-                        <button className="flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--v2-green)] px-2 py-1 text-[11px] text-[var(--v2-green)] hover:bg-[var(--v2-green)]/10">
+                        <button
+                          onClick={() => move(card.id, 'done')}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--v2-green)] px-2 py-1 text-[11px] text-[var(--v2-green)] hover:bg-[var(--v2-green)]/10 [-webkit-app-region:no-drag]"
+                        >
                           ✓ Approve
                         </button>
-                        <button className="flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--v2-amber)] px-2 py-1 text-[11px] text-[var(--v2-amber)] hover:bg-[var(--v2-amber)]/10">
+                        <button
+                          onClick={() => move(card.id, 'planning')}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--v2-amber)] px-2 py-1 text-[11px] text-[var(--v2-amber)] hover:bg-[var(--v2-amber)]/10 [-webkit-app-region:no-drag]"
+                        >
                           ↻ Iterate
                         </button>
-                        <button className="flex items-center justify-center rounded-md border border-[var(--v2-red)] px-2 py-1 text-[11px] text-[var(--v2-red)] hover:bg-[var(--v2-red)]/10">
+                        <button
+                          onClick={() => removeCard(card.id)}
+                          className="flex items-center justify-center rounded-md border border-[var(--v2-red)] px-2 py-1 text-[11px] text-[var(--v2-red)] hover:bg-[var(--v2-red)]/10 [-webkit-app-region:no-drag]"
+                        >
                           ✕
                         </button>
                       </div>
