@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import type { ProviderId } from '@/stores/kanbanStore';
 
+export type { ProviderId };
 export type SCTab = 'branches' | 'worktrees' | 'diffs' | 'log';
+export type AppMode = 'workbench' | 'kanban' | 'agents' | 'review';
 
 interface UIState {
   activeTab: SCTab;
@@ -11,6 +14,9 @@ interface UIState {
   expandedDiffFiles: Record<string, boolean>;
   reviewedFiles: Record<string, { checkedAt: number; signature: string }>;
   lastKeyPressed: string | null;
+  activeMode: AppMode;
+  activeProvider: ProviderId;
+  focusedSessionId: string | null;
 }
 
 interface UIActions {
@@ -28,6 +34,9 @@ interface UIActions {
   unreviewFile: (filePath: string) => void;
   isReviewedAndUnchanged: (filePath: string, signature: string) => boolean;
   purgeStaleReviews: (currentFiles: Array<{ filePath: string; signature: string }>) => void;
+  setActiveMode: (mode: AppMode) => void;
+  setActiveProvider: (provider: ProviderId) => void;
+  setFocusedSessionId: (id: string | null) => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -40,6 +49,9 @@ const initialState = {
   expandedDiffFiles: {} as Record<string, boolean>,
   reviewedFiles: {} as Record<string, { checkedAt: number; signature: string }>,
   lastKeyPressed: null,
+  activeMode: 'workbench' as AppMode,
+  activeProvider: 'claude' as ProviderId,
+  focusedSessionId: null,
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -122,6 +134,21 @@ export const useUIStore = create<UIStore>()(
             delete state.reviewedFiles[fp];
           }
         }
+      }),
+
+    setActiveMode: (mode) =>
+      set((state) => {
+        state.activeMode = mode;
+      }),
+
+    setActiveProvider: (provider) =>
+      set((state) => {
+        state.activeProvider = provider;
+      }),
+
+    setFocusedSessionId: (id) =>
+      set((state) => {
+        state.focusedSessionId = id;
       }),
   }))
 );
