@@ -134,10 +134,15 @@ export const DevPane = (): React.JSX.Element => {
   const setFocusedSessionId = useUIStore((s) => s.setFocusedSessionId);
   useEffect(() => {
     if (focusedSessionId !== null) {
-      setActiveSession(focusedSessionId);
+      const exists = sessions.some((s) => s.id === focusedSessionId);
+      if (exists) {
+        setActiveSession(focusedSessionId);
+      } else {
+        console.warn('[DevPane] focusedSessionId not found in sessions', { focusedSessionId });
+      }
       setFocusedSessionId(null);
     }
-  }, [focusedSessionId, setActiveSession, setFocusedSessionId]);
+  }, [focusedSessionId, sessions, setActiveSession, setFocusedSessionId]);
 
   const handleLaunch = useCallback(
     async (option: { label: string; command?: string; args?: string[]; worktreePath?: string }) => {

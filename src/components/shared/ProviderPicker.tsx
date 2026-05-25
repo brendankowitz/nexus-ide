@@ -25,15 +25,17 @@ export const ProviderPicker = ({ className }: ProviderPickerProps): React.JSX.El
     window.nexusAPI.settings.get().then((s) => {
       const saved = s['ui.activeProvider'] as ProviderId | undefined;
       if (saved !== undefined) setActiveProvider(saved);
-    }).catch(() => {
-      // settings unavailable in tests or before preload — ignore
+    }).catch((err: unknown) => {
+      // In tests/preload window.nexusAPI is not wired — safe to ignore.
+      // In production this means the provider preference was not restored.
+      console.warn('[ProviderPicker] settings.get() failed — provider preference not restored', err);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelect = (id: ProviderId) => {
     setActiveProvider(id);
-    window.nexusAPI.settings.set({ 'ui.activeProvider': id }).catch(() => {
-      // ignore persistence errors
+    window.nexusAPI.settings.set({ 'ui.activeProvider': id }).catch((err: unknown) => {
+      console.warn('[ProviderPicker] settings.set() failed — provider preference not persisted', err);
     });
   };
 
