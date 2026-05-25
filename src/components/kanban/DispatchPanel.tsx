@@ -99,10 +99,12 @@ export const DispatchPanel = ({
         }
       });
 
+      setLoading(false);
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setCardError(cardId, msg);
+      move(cardId, 'review');
       setErrorMsg(msg);
       setLoading(false);
     }
