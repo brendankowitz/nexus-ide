@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+
 interface NexusLogoProps {
   size?: number;
   light?: boolean;
@@ -39,10 +41,10 @@ export const NexusLogo = ({ size = 20, light = false }: NexusLogoProps): React.J
           gradientUnits="userSpaceOnUse"
         >
           {PROVIDER_COLORS.map((color, i) => (
-            <React.Fragment key={i}>
+            <Fragment key={i}>
               <stop offset={`${(i / n) * 100}%`} stopColor={color} />
               <stop offset={`${((i + 1) / n) * 100}%`} stopColor={color} />
-            </React.Fragment>
+            </Fragment>
           ))}
         </linearGradient>
         <clipPath id={clipId}>
