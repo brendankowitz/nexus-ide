@@ -81,6 +81,13 @@ describe('linkRun', () => {
     const other = useKanbanStore.getState().cards.find((c) => c.id === 'c4');
     expect(other?.runId).toBeUndefined();
   });
+
+  it('is a no-op when cardId does not exist', () => {
+    useKanbanStore.getState().addCard(makeCard('c-exists'));
+    useKanbanStore.getState().linkRun('does-not-exist', 'run-1', 'sess-1');
+    expect(useKanbanStore.getState().cards).toHaveLength(1);
+    expect(useKanbanStore.getState().cards[0].runId).toBeUndefined();
+  });
 });
 
 describe('setCardError', () => {
@@ -89,6 +96,20 @@ describe('setCardError', () => {
     useKanbanStore.getState().setCardError('c5', 'provider not configured');
     const card = useKanbanStore.getState().cards.find((c) => c.id === 'c5');
     expect(card?.error).toBe('provider not configured');
+  });
+
+  it('overwrites a previous error', () => {
+    useKanbanStore.getState().addCard(makeCard('c-err'));
+    useKanbanStore.getState().setCardError('c-err', 'first error');
+    useKanbanStore.getState().setCardError('c-err', 'second error');
+    const card = useKanbanStore.getState().cards.find((c) => c.id === 'c-err')!;
+    expect(card.error).toBe('second error');
+  });
+
+  it('is a no-op when cardId does not exist', () => {
+    useKanbanStore.getState().addCard(makeCard('c-other'));
+    useKanbanStore.getState().setCardError('does-not-exist', 'err');
+    expect(useKanbanStore.getState().cards[0].error).toBeUndefined();
   });
 });
 
