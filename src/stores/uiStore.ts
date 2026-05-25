@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import type { ProviderId } from '@/stores/kanbanStore';
 
+export type { ProviderId };
 export type SCTab = 'branches' | 'worktrees' | 'diffs' | 'log';
 export type AppMode = 'workbench' | 'kanban' | 'agents' | 'review';
-export type ProviderId = 'claude' | 'copilot' | 'codex' | 'gemini' | 'custom';
 
 interface UIState {
   activeTab: SCTab;

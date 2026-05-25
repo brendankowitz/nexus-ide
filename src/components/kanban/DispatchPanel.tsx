@@ -104,7 +104,9 @@ export const DispatchPanel = ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setCardError(cardId, msg);
-      move(cardId, 'review');
+      if (existingCardId === undefined) {
+        move(cardId, 'review');
+      }
       setErrorMsg(msg);
       setLoading(false);
     }
