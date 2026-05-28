@@ -67,7 +67,7 @@ export const ActivityPanel = (): React.JSX.Element => {
             : null;
 
           const ctx = session.claudeStatus?.contextPercent;
-          const tokens = session.claudeStatus?.tokensUsed;
+          const tokens = session.claudeStatus?.tokens;
 
           return (
             <div

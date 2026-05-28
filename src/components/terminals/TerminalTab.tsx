@@ -232,6 +232,8 @@ interface TerminalTabProps {
   sessionId: string;
   /** When true, removes border/rounding for edge-to-edge rendering. */
   borderless?: boolean;
+  /** When true, suppresses the TerminalHeader (use when the parent renders its own session strip). */
+  hideHeader?: boolean;
   /** Called when the kill button in the header is clicked. */
   onKill?: () => void;
   /** Controls whether this terminal is the active/visible one in the pool. Defaults to true. */
@@ -241,6 +243,7 @@ interface TerminalTabProps {
 export const TerminalTab = ({
   sessionId,
   borderless = false,
+  hideHeader = false,
   onKill,
   visible = true,
 }: TerminalTabProps): React.JSX.Element => {
@@ -381,7 +384,7 @@ export const TerminalTab = ({
         borderless ? '' : 'rounded-[var(--radius-md)] border border-border-subtle'
       }`}
     >
-      <TerminalHeader sessionId={sessionId} onKill={onKill} />
+      {!hideHeader && <TerminalHeader sessionId={sessionId} onKill={onKill} />}
       <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden" />
     </div>
   );

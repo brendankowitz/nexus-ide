@@ -30,8 +30,6 @@ const TabIcons: Record<AppMode, React.JSX.Element> = {
 interface ModeTab { id: AppMode; label: string; }
 const TABS: ModeTab[] = [
   { id: 'workbench', label: 'Workbench' },
-  { id: 'kanban',    label: 'Kanban'    },
-  { id: 'agents',    label: 'Agents'    },
   { id: 'review',    label: 'Review'    },
 ];
 
