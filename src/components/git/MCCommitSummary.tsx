@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useToastStore } from '@/stores/toastStore';
-import type { Commit, DiffFile } from '@/types';
+import type { Commit, DiffFile, DiffHunk } from '@/types';
 
 interface MCCommitSummaryProps {
   commit: Commit | null;
@@ -75,6 +75,83 @@ function authorColor(initials: string, isAI: boolean): string {
   return palette[h % palette.length] ?? 'var(--v2-text-dim)';
 }
 
+// ── Inline quick-diff row ─────────────────────────────────────────────────────
+
+function QuickDiff({
+  projectId,
+  commitHash,
+  filePath,
+}: {
+  projectId: string;
+  commitHash: string;
+  filePath: string;
+}): React.JSX.Element {
+  const [hunks, setHunks] = useState<DiffHunk[]>([]);
+  const [loading, setLoading] = useState(true);
+  const addToast = useToastStore((s) => s.addToast);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    if (window.nexusAPI?.git === undefined) { setLoading(false); return; }
+    window.nexusAPI.git
+      .commitFileHunks(projectId, commitHash, filePath)
+      .then((result) => { if (mountedRef.current) { setHunks(result); setLoading(false); } })
+      .catch((err: unknown) => {
+        if (mountedRef.current) {
+          addToast(`Failed to load diff: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          setLoading(false);
+        }
+      });
+    return () => { mountedRef.current = false; };
+  }, [projectId, commitHash, filePath, addToast]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--v2-text-faint)', fontFamily: 'var(--font-mono, monospace)' }}>
+        Loading…
+      </div>
+    );
+  }
+  if (hunks.length === 0) {
+    return (
+      <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--v2-text-faint)', fontFamily: 'var(--font-mono, monospace)' }}>
+        No diff available
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)', fontSize: 11, lineHeight: 1.5, maxHeight: 320, overflow: 'auto' }}>
+      {hunks.map((hunk, hi) => (
+        <div key={`${hunk.header}-${hi}`}>
+          <div style={{ padding: '2px 10px', color: 'var(--v2-text-faint)', background: 'var(--v2-bg1)', borderTop: hi > 0 ? '1px solid var(--v2-border-soft)' : undefined }}>
+            {hunk.header}
+          </div>
+          {hunk.lines.map((line, li) => {
+            const isAdd = line.startsWith('+');
+            const isDel = line.startsWith('-');
+            return (
+              <div
+                key={li}
+                style={{
+                  padding: '0 10px',
+                  background: isAdd ? 'rgba(80,200,120,0.08)' : isDel ? 'rgba(220,80,80,0.08)' : 'transparent',
+                  color: isAdd ? 'var(--v2-green)' : isDel ? 'var(--v2-red)' : 'var(--v2-text-dim)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {line}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const MCCommitSummary = ({
   commit,
   projectId,
@@ -82,7 +159,13 @@ export const MCCommitSummary = ({
 }: MCCommitSummaryProps): React.JSX.Element => {
   const [files, setFiles] = useState<DiffFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedFile, setExpandedFile] = useState<string | null>(null);
   const addToast = useToastStore((s) => s.addToast);
+
+  // Reset expansion when the commit changes
+  useEffect(() => {
+    setExpandedFile(null);
+  }, [commit?.hash]);
 
   useEffect(() => {
     if (commit === null || projectId === null) {
@@ -309,71 +392,88 @@ export const MCCommitSummary = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {files.map((f) => {
             const sc = STATUS_COLOR[f.status] ?? 'var(--v2-text-dim)';
+            const isExpanded = expandedFile === f.filePath;
             return (
               <div
                 key={f.filePath}
-                onDoubleClick={onOpen}
-                title="double-click to open full diff"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 10px',
                   background: 'var(--v2-bg1)',
-                  border: '1px solid var(--v2-border-soft)',
+                  border: `1px solid ${isExpanded ? 'var(--v2-border)' : 'var(--v2-border-soft)'}`,
                   borderRadius: 6,
-                  fontSize: 12,
-                  cursor: 'pointer',
+                  overflow: 'hidden',
                 }}
               >
-                <span
+                {/* File row header — click to expand, double-click to open full diff */}
+                <div
+                  onClick={() => setExpandedFile(isExpanded ? null : f.filePath)}
+                  onDoubleClick={onOpen}
+                  title="click to preview · double-click to open full diff"
                   style={{
-                    fontFamily:
-                      'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
-                    fontSize: 10,
-                    color: sc,
-                    width: 12,
-                    flexShrink: 0,
-                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    cursor: 'pointer',
                   }}
                 >
-                  {f.status}
-                </span>
-                <span
-                  style={{
-                    flex: 1,
-                    fontFamily:
-                      'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
-                    color: 'var(--v2-text-dim)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={f.filePath}
-                >
-                  {f.filePath}
-                </span>
-                <span
-                  style={{
-                    fontFamily:
-                      'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
-                    fontSize: 10.5,
-                    color: 'var(--v2-green)',
-                  }}
-                >
-                  +{f.additions}
-                </span>
-                {f.deletions > 0 && (
-                  <span
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     style={{
-                      fontFamily:
-                        'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
-                      fontSize: 10.5,
-                      color: 'var(--v2-red)',
+                      color: 'var(--v2-text-faint)',
+                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                      transition: 'transform 120ms',
+                      flexShrink: 0,
                     }}
                   >
-                    −{f.deletions}
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
+                      fontSize: 10,
+                      color: sc,
+                      width: 12,
+                      flexShrink: 0,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {f.status}
                   </span>
+                  <span
+                    style={{
+                      flex: 1,
+                      fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
+                      color: 'var(--v2-text-dim)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={f.filePath}
+                  >
+                    {f.filePath}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)', fontSize: 10.5, color: 'var(--v2-green)' }}>
+                    +{f.additions}
+                  </span>
+                  {f.deletions > 0 && (
+                    <span style={{ fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)', fontSize: 10.5, color: 'var(--v2-red)' }}>
+                      −{f.deletions}
+                    </span>
+                  )}
+                </div>
+                {/* Inline quick diff */}
+                {isExpanded && projectId !== null && (
+                  <div style={{ borderTop: '1px solid var(--v2-border-soft)', background: 'var(--v2-bg0)' }}>
+                    <QuickDiff projectId={projectId} commitHash={commit.hash} filePath={f.filePath} />
+                  </div>
                 )}
               </div>
             );

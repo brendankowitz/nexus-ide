@@ -351,7 +351,7 @@ export interface NexusAPI {
     diffHunks(projectId: string, filePath: string, worktreePath?: string): Promise<DiffHunk[]>;
     commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]>;
     commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]>;
-    log(projectId: string, count?: number, worktreePath?: string): Promise<Commit[]>;
+    log(projectId: string, count?: number, worktreePath?: string, branch?: string): Promise<Commit[]>;
     status(projectId: string, worktreePath?: string): Promise<GitStatus>;
     stage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     unstage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;

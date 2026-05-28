@@ -610,10 +610,11 @@ export function registerIpcHandlers(): void {
       projectId: string,
       count?: number,
       worktreePath?: string,
+      branch?: string,
     ): Promise<Commit[]> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getLog(worktreePath ?? projectPath, count);
+        return await getLog(worktreePath ?? projectPath, count, branch);
       } catch (err) {
         throwIpcError('GIT_LOG_FAILED', err);
       }

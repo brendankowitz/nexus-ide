@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useTerminalStore } from '@/stores/terminalStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useUIStore } from '@/stores/uiStore';
 import { PROVIDERS } from '@/components/shared/ProviderPicker';
 
 const KIND_COLORS: Record<string, string> = {
@@ -28,9 +30,45 @@ function agentTypeToProviderId(agentType: string): string {
 
 export const ActivityPanel = (): React.JSX.Element => {
   const sessions = useTerminalStore((s) => s.sessions);
+  const setActiveSession = useTerminalStore((s) => s.setActiveSession);
   const projects = useProjectStore((s) => s.projects);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
+  const setActiveMode = useUIStore((s) => s.setActiveMode);
+  const [collapsed, setCollapsed] = useState(true);
+
+  const handleSelectSession = (sessionId: string, projectId: string | undefined): void => {
+    if (projectId !== undefined) setActiveProject(projectId);
+    setActiveSession(sessionId);
+    setActiveMode('workbench');
+  };
 
   const active = sessions.filter((s) => s.status === 'running' || s.status === 'idle');
+
+  if (collapsed) {
+    return (
+      <div
+        className="flex flex-col items-center py-2 bg-[var(--v2-bg1)]"
+        style={{ width: 32, flexShrink: 0, borderLeft: '1px solid var(--v2-border)' }}
+      >
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          title="Expand activity panel"
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--v2-bg2)] text-[var(--v2-text-faint)] hover:text-[var(--v2-text-dim)] transition-colors cursor-pointer"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        {active.length > 0 && (
+          <span
+            className="mt-2 w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ background: 'var(--v2-green)' }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -40,9 +78,21 @@ export const ActivityPanel = (): React.JSX.Element => {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--v2-border-soft)]">
         <span className="text-[12px] font-semibold text-[var(--v2-text)]">Activity · across all projects</span>
-        {active.length > 0 && (
-          <span className="text-[11px] text-[var(--v2-green)]">live</span>
-        )}
+        <div className="flex items-center gap-2">
+          {active.length > 0 && (
+            <span className="text-[11px] text-[var(--v2-green)]">live</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            title="Collapse activity panel"
+            className="flex items-center justify-center w-5 h-5 rounded hover:bg-[var(--v2-bg2)] text-[var(--v2-text-faint)] hover:text-[var(--v2-text-dim)] transition-colors cursor-pointer"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Activity rows */}
@@ -70,9 +120,11 @@ export const ActivityPanel = (): React.JSX.Element => {
           const tokens = session.claudeStatus?.tokens;
 
           return (
-            <div
+            <button
               key={session.id}
-              className="grid gap-1.5 rounded-md px-2 py-1.5"
+              type="button"
+              onClick={() => handleSelectSession(session.id, session.projectId)}
+              className="grid gap-1.5 rounded-md px-2 py-1.5 w-full text-left cursor-pointer hover:bg-[var(--v2-bg2)] transition-colors"
               style={{ gridTemplateColumns: '32px 1fr' }}
             >
               {/* Timestamp / elapsed */}
@@ -120,7 +172,7 @@ export const ActivityPanel = (): React.JSX.Element => {
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

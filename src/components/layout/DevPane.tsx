@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { TerminalTab } from '@/components/terminals/TerminalTab';
 import { LaunchMenu } from '@/components/terminals/LaunchMenu';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
+import { MCEmptyState } from '@/components/layout/MCEmptyState';
 import { PROVIDERS } from '@/components/shared/ProviderPicker';
 import type { TerminalSession, ClaudeStatus } from '@/types';
 
@@ -294,7 +295,8 @@ export const DevPane = (): React.JSX.Element => {
   useEffect(() => {
     const { sessions: s, activeSessionId: cur, setActiveSession: set } = useTerminalStore.getState();
     const projectSessions = s.filter((x) => activeProjectId !== null && x.projectId === activeProjectId);
-    if (cur !== null && !projectSessions.some((x) => x.id === cur)) {
+    // Re-select when: no active session, or active session belongs to a different project
+    if (cur === null || !projectSessions.some((x) => x.id === cur)) {
       set(projectSessions[0]?.id ?? null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -455,7 +457,11 @@ export const DevPane = (): React.JSX.Element => {
   const handleSelectSession = (id: string) => {
     setActiveSession(id);
     const s = sessions.find((x) => x.id === id);
-    if (s) setActiveWorktreePath(s.worktreePath ?? null);
+    // Only update the worktree path if the session belongs to the active project.
+    // Cross-project sessions must not corrupt the current project's git context.
+    if (s && s.projectId === activeProject?.id) {
+      setActiveWorktreePath(s.worktreePath ?? null);
+    }
   };
 
   const showWelcome = activeProject === null && sessions.length === 0;
@@ -463,16 +469,6 @@ export const DevPane = (): React.JSX.Element => {
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-[var(--v2-bg0)]">
-      {/* Active session strip */}
-      {activeSession !== undefined && (
-        <MCSessionStrip
-          session={activeSession}
-          onKill={() => void handleKill(activeSession.id)}
-          newButtonRef={newButtonRef}
-          onNew={() => setLaunchMenuOpen(true)}
-        />
-      )}
-
       {/* Multi-session tab strip — visible when there are 2+ project sessions or any other-project sessions */}
       {(projectSessions.length > 1 || otherSessions.length > 0) && (
         <SessionTabStrip
@@ -483,14 +479,23 @@ export const DevPane = (): React.JSX.Element => {
         />
       )}
 
+      {/* Active session strip */}
+      {activeSession !== undefined && (
+        <MCSessionStrip
+          session={activeSession}
+          onKill={() => void handleKill(activeSession.id)}
+          newButtonRef={newButtonRef}
+          onNew={() => setLaunchMenuOpen(true)}
+        />
+      )}
+
       {/* Terminal area */}
       <div ref={terminalPaneRef} className="relative flex-1 overflow-hidden">
         {showWelcome && <WelcomeScreen />}
-        {showEmptyState && (
-          <DevPaneEmptyState
-            projectName={activeProject?.name ?? null}
+        {showEmptyState && activeProject !== null && (
+          <MCEmptyState
+            project={activeProject}
             onLaunch={(opt) => { void handleLaunch(opt); }}
-            onOpenLaunchMenu={() => setLaunchMenuOpen(true)}
           />
         )}
         {!showWelcome && activeSessionId === null && !showEmptyState && (

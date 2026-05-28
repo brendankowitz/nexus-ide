@@ -40,6 +40,20 @@ export const SCPanel = (): React.JSX.Element => {
 
   const reviewTab = useUIStore((s) => s.reviewTab);
 
+  // ── Derived display values (must come before callbacks that use them) ────────
+  const currentBranchName = useMemo(() => {
+    if (gitStatus !== null) return stripBranchRef(gitStatus.branch);
+    const head = branches.find((b) => b.isHead);
+    if (head !== undefined) return stripBranchRef(head.name);
+    return branches[0]?.name !== undefined ? stripBranchRef(branches[0].name) : '—';
+  }, [branches, gitStatus]);
+
+  // Branch selected in the context bar dropdown. Resets to HEAD when the actual branch changes.
+  const [selectedBranch, setSelectedBranch] = useState(currentBranchName);
+  useEffect(() => {
+    setSelectedBranch(currentBranchName);
+  }, [currentBranchName]);
+
   // ── Changed files (working tree) ─────────────────
   const [changedFiles, setChangedFiles] = useState<DiffFile[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
@@ -68,8 +82,6 @@ export const SCPanel = (): React.JSX.Element => {
     }
   }, [activeProjectId, activeWorktreePath]);
 
-  // Refresh whenever project / worktree / tab changes; also when gitStatus changes
-  // (the global poller updates this), which gives us cheap reactive refresh.
   useEffect(() => {
     void loadDiff();
   }, [loadDiff, gitStatus?.changeCount, reviewTab]);
@@ -91,6 +103,7 @@ export const SCPanel = (): React.JSX.Element => {
         activeProjectId,
         undefined,
         activeWorktreePath ?? undefined,
+        selectedBranch || undefined,
       );
       setCommits(result);
       setActiveCommitIndex((idx) => (idx >= result.length ? 0 : idx));
@@ -102,31 +115,16 @@ export const SCPanel = (): React.JSX.Element => {
     } finally {
       setCommitsLoading(false);
     }
-  }, [activeProjectId, activeWorktreePath]);
+  }, [activeProjectId, activeWorktreePath, selectedBranch]);
 
   useEffect(() => {
     void loadCommits();
-  }, [loadCommits, gitStatus?.branch, reviewTab]);
+  }, [loadCommits, reviewTab]);
 
   // Reset drilldown when project, worktree, or tab changes.
   useEffect(() => {
     setDrilldownIndex(null);
   }, [activeProjectId, activeWorktreePath, reviewTab]);
-
-  // ── Derived display values ───────────────────────
-  const currentBranchName = useMemo(() => {
-    if (gitStatus !== null) return stripBranchRef(gitStatus.branch);
-    const head = branches.find((b) => b.isHead);
-    if (head !== undefined) return stripBranchRef(head.name);
-    return branches[0]?.name !== undefined ? stripBranchRef(branches[0].name) : '—';
-  }, [branches, gitStatus]);
-
-  // Branch selected in the context bar dropdown — tracks which branch to use as
-  // the comparison label. Resets to HEAD whenever the actual branch changes.
-  const [selectedBranch, setSelectedBranch] = useState(currentBranchName);
-  useEffect(() => {
-    setSelectedBranch(currentBranchName);
-  }, [currentBranchName]);
 
   const activeWorktree = useMemo(() => {
     if (activeWorktreePath !== null) {

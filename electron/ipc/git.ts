@@ -1024,16 +1024,19 @@ function parseRefs(decoration: string): string[] {
 export async function getLog(
   projectPath: string,
   count = 50,
+  branch?: string,
 ): Promise<Commit[]> {
   try {
     // Use a delimiter unlikely to appear in commit messages
     const SEP = '---nexus-commit-sep---';
-    const result = await execGit(projectPath, [
+    const args = [
       'log',
       `--format=${SEP}%n%H|%P|%s|%an|%ae|%aI|%D`,
       '--numstat',
       `-n${count}`,
-    ]);
+    ];
+    if (branch) args.push(branch);
+    const result = await execGit(projectPath, args);
 
     if (result.exitCode !== 0 || !result.stdout.trim()) return [];
 

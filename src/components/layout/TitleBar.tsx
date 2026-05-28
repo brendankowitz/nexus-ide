@@ -40,7 +40,7 @@ export const TitleBar = (): React.JSX.Element => {
 
   return (
     <div
-      className={`flex h-[38px] items-center border-b border-[var(--v2-border)] bg-[var(--v2-bg1)] ${isMac ? 'pl-20' : 'pl-3.5'} pr-3 [-webkit-app-region:drag] relative z-[100] gap-3.5`}
+      className={`flex h-[38px] items-center border-b border-[var(--v2-border)] bg-[var(--v2-bg1)] ${isMac ? 'pl-20' : 'pl-3.5'} ${isMac ? 'pr-3' : 'pr-[140px]'} [-webkit-app-region:drag] relative z-[100] gap-3.5`}
     >
       {/* Logo + wordmark */}
       <div className="flex items-center gap-2 shrink-0 [-webkit-app-region:no-drag]">
