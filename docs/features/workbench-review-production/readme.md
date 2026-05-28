@@ -40,17 +40,19 @@ its visual design predates the MC v2 palette and the updated layout spec.
 - `ActivityPanel.tsx` — Fixed `tokensUsed` → `tokens` field name (token count was never displaying).
 - `TitleBar.tsx` — Removed Kanban and Agents tabs.
 
-### Pending: Review Mode Redesign
+### Review Mode Redesign — Completed
 See [review-redesign.md](investigations/review-redesign.md) for full spec.
 
-Key changes needed:
-1. Replace the 4-tab SCPanel header (`Diffs / Branches / Worktrees / Log`) with the design's
-   `MCReviewContextBar` (Repo pill + Branch dropdown + Worktree dropdown + tab toggle).
-2. Tabs collapse to two: **Working changes** (file list + diff) and **History** (commit log + drilldown).
-3. Commit log gets a timeline visual (colored dots + vertical rule, author badge).
-4. Add `MCCommitDrilldown` view: back button + per-file diff for a single commit.
-5. Apply v2 amber active border (left 2px) to file rows and commit rows consistently.
+Implemented:
+1. `MCReviewContextBar` — Repo pill + Branch/Worktree dropdowns + tab toggle with counts
+2. `MCChangedFiles` — 280px left rail, status badges (M=blue/A=green/D=red/R=amber), amber active row
+3. `MCDiffPane` — right diff pane reusing DiffHunk, WT badge, Approve + Open in editor
+4. `MCCommitLog` — timeline visual (colored dots + vertical rule), author badges, amber active row
+5. `MCCommitSummary` — commit header + stats + file list + tip box, "View full diff" (amber)
+6. `MCCommitDrilldown` — full-pane commit view, 300px file nav, per-file diff, Back button
+7. `MCDropdown` — reusable v2 dropdown with click-outside close, ahead/behind/dirty indicators
+8. `SCPanel` — full-pane host wiring all MC* components, drilldown takeover
 
 ## Decision
 
-*Workbench course-correction complete. Review redesign pending — see investigation.*
+*Both Workbench and Review modes are production-ready. Review redesign complete — all MC* components implemented and verified.*

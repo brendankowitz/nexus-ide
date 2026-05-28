@@ -1,6 +1,6 @@
 # Investigation: Review Mode Redesign
 
-**Status**: Pending implementation
+**Status**: Implemented
 **Source**: Design bundle `8zccet0xvBkT8-zHF4fWzA` · `prototype-mission-control.jsx` lines 485–976
 
 ## What the new design specifies
