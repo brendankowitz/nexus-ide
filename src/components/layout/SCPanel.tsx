@@ -11,6 +11,7 @@ import { useToastStore } from '@/stores/toastStore';
 import { MCReviewContextBar } from '@/components/git/MCReviewContextBar';
 import { MCChangedFiles } from '@/components/git/MCChangedFiles';
 import { MCDiffPane } from '@/components/git/MCDiffPane';
+import { MCQuickEditor } from '@/components/git/MCQuickEditor';
 import { MCCommitLog } from '@/components/git/MCCommitLog';
 import { MCCommitSummary } from '@/components/git/MCCommitSummary';
 import { MCCommitDrilldown } from '@/components/git/MCCommitDrilldown';
@@ -25,11 +26,6 @@ function worktreeBasename(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
-/**
- * SCPanel — Review mode shell. Mounts MCReview full-pane: context bar on top,
- * split content below (changed files | diff) or (commit log | summary). Commit
- * drilldown replaces the entire content area when active.
- */
 export const SCPanel = (): React.JSX.Element => {
   const activeProject = useProjectStore(selectActiveProject);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
@@ -39,8 +35,12 @@ export const SCPanel = (): React.JSX.Element => {
   const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
 
   const reviewTab = useUIStore((s) => s.reviewTab);
+  const reviewFile = useUIStore((s) => s.reviewFile);
+  const skipFile = useUIStore((s) => s.skipFile);
+  const requestChangesForFile = useUIStore((s) => s.requestChangesForFile);
+  const getFileReviewState = useUIStore((s) => s.getFileReviewState);
 
-  // ── Derived display values (must come before callbacks that use them) ────────
+  // ── Derived display values ───────────────────────────────────────────────────
   const currentBranchName = useMemo(() => {
     if (gitStatus !== null) return stripBranchRef(gitStatus.branch);
     const head = branches.find((b) => b.isHead);
@@ -48,17 +48,15 @@ export const SCPanel = (): React.JSX.Element => {
     return branches[0]?.name !== undefined ? stripBranchRef(branches[0].name) : '—';
   }, [branches, gitStatus]);
 
-  // Branch selected in the context bar dropdown. Resets to HEAD when the actual branch changes.
   const [selectedBranch, setSelectedBranch] = useState(currentBranchName);
-  useEffect(() => {
-    setSelectedBranch(currentBranchName);
-  }, [currentBranchName]);
+  useEffect(() => { setSelectedBranch(currentBranchName); }, [currentBranchName]);
 
-  // ── Changed files (working tree) ─────────────────
+  // ── Changed files ────────────────────────────────────────────────────────────
   const [changedFiles, setChangedFiles] = useState<DiffFile[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [editingFilePath, setEditingFilePath] = useState<string | null>(null);
 
   const loadDiff = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
@@ -66,10 +64,7 @@ export const SCPanel = (): React.JSX.Element => {
     setFilesLoading(true);
     setDiffError(null);
     try {
-      const result = await window.nexusAPI.git.diff(
-        activeProjectId,
-        activeWorktreePath ?? undefined,
-      );
+      const result = await window.nexusAPI.git.diff(activeProjectId, activeWorktreePath ?? undefined);
       setChangedFiles(result);
       setActiveFileIndex((idx) => (idx >= result.length ? 0 : idx));
     } catch (err) {
@@ -82,11 +77,9 @@ export const SCPanel = (): React.JSX.Element => {
     }
   }, [activeProjectId, activeWorktreePath]);
 
-  useEffect(() => {
-    void loadDiff();
-  }, [loadDiff, gitStatus?.changeCount, reviewTab]);
+  useEffect(() => { void loadDiff(); }, [loadDiff, gitStatus?.changeCount, reviewTab]);
 
-  // ── Commit log ───────────────────────────────────
+  // ── Commit log ───────────────────────────────────────────────────────────────
   const [commits, setCommits] = useState<Commit[]>([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [commitsError, setCommitsError] = useState<string | null>(null);
@@ -100,10 +93,7 @@ export const SCPanel = (): React.JSX.Element => {
     setCommitsError(null);
     try {
       const result = await window.nexusAPI.git.log(
-        activeProjectId,
-        undefined,
-        activeWorktreePath ?? undefined,
-        selectedBranch || undefined,
+        activeProjectId, undefined, activeWorktreePath ?? undefined, selectedBranch || undefined,
       );
       setCommits(result);
       setActiveCommitIndex((idx) => (idx >= result.length ? 0 : idx));
@@ -117,14 +107,12 @@ export const SCPanel = (): React.JSX.Element => {
     }
   }, [activeProjectId, activeWorktreePath, selectedBranch]);
 
-  useEffect(() => {
-    void loadCommits();
-  }, [loadCommits, reviewTab]);
+  useEffect(() => { void loadCommits(); }, [loadCommits, reviewTab]);
 
-  // Reset drilldown when project, worktree, or tab changes.
-  useEffect(() => {
-    setDrilldownIndex(null);
-  }, [activeProjectId, activeWorktreePath, reviewTab]);
+  useEffect(() => { setDrilldownIndex(null); }, [activeProjectId, activeWorktreePath, reviewTab]);
+
+  // Reset editing when file selection changes
+  useEffect(() => { setEditingFilePath(null); }, [activeFileIndex, activeProjectId, activeWorktreePath]);
 
   const activeWorktree = useMemo(() => {
     if (activeWorktreePath !== null) {
@@ -141,29 +129,92 @@ export const SCPanel = (): React.JSX.Element => {
         ? worktreeBasename(activeProject.path)
         : '—';
 
-  // ── Drilldown takeover ───────────────────────────
-  if (drilldownIndex !== null) {
-    const commit = commits[drilldownIndex];
-    if (commit !== undefined) {
-      return (
-        <div
-          className="h-full w-full"
-          style={{ background: 'var(--v2-bg0)', display: 'flex', flexDirection: 'column', minHeight: 0 }}
-        >
-          <MCCommitDrilldown
-            commit={commit}
-            projectId={activeProjectId}
-            onBack={() => setDrilldownIndex(null)}
-          />
-        </div>
-      );
-    }
-  }
+  const basePath = activeWorktreePath ?? activeProject?.path ?? null;
 
+  // ── Review file actions ──────────────────────────────────────────────────────
   const activeFile =
     changedFiles.length > 0
       ? (changedFiles[Math.min(activeFileIndex, changedFiles.length - 1)] ?? null)
       : null;
+
+  const activeFileSig = activeFile !== null
+    ? `${activeFile.additions}-${activeFile.deletions}`
+    : '';
+
+  const currentReviewState = activeFile !== null
+    ? getFileReviewState(activeFile.filePath, activeFileSig)
+    : 'unreviewed';
+
+  const handleApproveAndNext = (): void => {
+    if (activeFile === null) return;
+    reviewFile(activeFile.filePath, activeFileSig);
+    setActiveFileIndex((i) => (i < changedFiles.length - 1 ? i + 1 : i));
+  };
+
+  const handleSkip = (): void => {
+    if (activeFile === null) return;
+    skipFile(activeFile.filePath, activeFileSig);
+    setActiveFileIndex((i) => (i < changedFiles.length - 1 ? i + 1 : i));
+  };
+
+  const handleRequestChanges = (): void => {
+    if (activeFile === null) return;
+    requestChangesForFile(activeFile.filePath, activeFileSig);
+  };
+
+  const handleNextUnreviewed = (): void => {
+    const reviewedFiles = useUIStore.getState().reviewedFiles;
+    const total = changedFiles.length;
+    for (let offset = 1; offset <= total; offset++) {
+      const i = (activeFileIndex + offset) % total;
+      const f = changedFiles[i];
+      if (f === undefined) continue;
+      const sig = `${f.additions}-${f.deletions}`;
+      const entry = reviewedFiles[f.filePath];
+      if (entry === undefined || entry.signature !== sig) {
+        setActiveFileIndex(i);
+        return;
+      }
+    }
+  };
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (reviewTab !== 'changes') return;
+    const handler = (e: KeyboardEvent): void => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.key === 'j' || e.key === 'J') {
+        setActiveFileIndex((i) => (i < changedFiles.length - 1 ? i + 1 : 0));
+      } else if (e.key === 'k' || e.key === 'K') {
+        setActiveFileIndex((i) => (i > 0 ? i - 1 : changedFiles.length - 1));
+      } else if (e.key === 'a' || e.key === 'A') {
+        handleApproveAndNext();
+      } else if (e.key === 'r' || e.key === 'R') {
+        handleRequestChanges();
+      } else if (e.key === 's' || e.key === 'S') {
+        handleSkip();
+      } else if (e.key === 'n' || e.key === 'N') {
+        handleNextUnreviewed();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewTab, changedFiles, activeFileIndex, activeFile, activeFileSig]);
+
+  // ── Drilldown takeover ───────────────────────────────────────────────────────
+  if (drilldownIndex !== null) {
+    const commit = commits[drilldownIndex];
+    if (commit !== undefined) {
+      return (
+        <div className="h-full w-full" style={{ background: 'var(--v2-bg0)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <MCCommitDrilldown commit={commit} projectId={activeProjectId} onBack={() => setDrilldownIndex(null)} />
+        </div>
+      );
+    }
+  }
 
   const activeCommit =
     commits.length > 0
@@ -173,12 +224,7 @@ export const SCPanel = (): React.JSX.Element => {
   return (
     <div
       className="h-full w-full"
-      style={{
-        background: 'var(--v2-bg0)',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-      }}
+      style={{ background: 'var(--v2-bg0)', display: 'flex', flexDirection: 'column', minHeight: 0 }}
     >
       <MCReviewContextBar
         changedFileCount={changedFiles.length}
@@ -200,17 +246,38 @@ export const SCPanel = (): React.JSX.Element => {
             <MCChangedFiles
               files={changedFiles}
               activeIndex={activeFileIndex}
-              onSelect={setActiveFileIndex}
+              onSelect={(i) => { setActiveFileIndex(i); setEditingFilePath(null); }}
+              onPrev={() => { setActiveFileIndex((i) => (i > 0 ? i - 1 : changedFiles.length - 1)); setEditingFilePath(null); }}
+              onNext={() => { setActiveFileIndex((i) => (i < changedFiles.length - 1 ? i + 1 : 0)); setEditingFilePath(null); }}
+              onNextUnreviewed={handleNextUnreviewed}
               branchName={selectedBranch}
               worktreeLabel={worktreeLabel}
               loading={filesLoading}
               error={diffError}
             />
-            <MCDiffPane
-              projectId={activeProjectId}
-              worktreePath={activeWorktreePath}
-              file={activeFile}
-            />
+            {editingFilePath !== null && activeFile !== null && activeFile.filePath === editingFilePath ? (
+              <MCQuickEditor
+                projectId={activeProjectId}
+                basePath={basePath}
+                file={activeFile}
+                onBack={() => setEditingFilePath(null)}
+              />
+            ) : (
+              <MCDiffPane
+                projectId={activeProjectId}
+                worktreePath={activeWorktreePath}
+                file={activeFile}
+                activeIndex={activeFileIndex}
+                totalFiles={changedFiles.length}
+                reviewState={currentReviewState}
+                onPrev={() => setActiveFileIndex((i) => (i > 0 ? i - 1 : changedFiles.length - 1))}
+                onNext={() => setActiveFileIndex((i) => (i < changedFiles.length - 1 ? i + 1 : 0))}
+                onSkip={handleSkip}
+                onRequestChanges={handleRequestChanges}
+                onApproveAndNext={handleApproveAndNext}
+                onEdit={() => { if (activeFile !== null) setEditingFilePath(activeFile.filePath); }}
+              />
+            )}
           </>
         ) : (
           <>

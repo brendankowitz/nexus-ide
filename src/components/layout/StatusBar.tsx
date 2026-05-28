@@ -34,7 +34,6 @@ export const StatusBar = (): React.JSX.Element => {
       <span>·</span>
       <span>{running} agent{running !== 1 ? 's' : ''} · cpu {cpu}%</span>
       <div className="flex-1" />
-      <span>Electron shell</span>
     </div>
   );
 };

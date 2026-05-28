@@ -824,6 +824,19 @@ export async function revertFile(
   await execGit(projectPath, ['checkout', 'HEAD', '--', normalizePath(filePath)]);
 }
 
+/* ─── writeFileContent ─────────────────────────────────────────────────────── */
+
+/**
+ * Write content to a file in the working tree.
+ */
+export async function writeFileContent(
+  projectPath: string,
+  filePath: string,
+  content: string,
+): Promise<void> {
+  await writeFile(join(projectPath, filePath), content, 'utf8');
+}
+
 /* ─── deleteFile ───────────────────────────────────────────────────────────── */
 
 /**

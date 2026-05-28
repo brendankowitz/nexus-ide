@@ -156,7 +156,7 @@ export const MCEmptyState = ({ project, onLaunch }: MCEmptyStateProps): React.JS
         <div style={{ flex: 1 }} />
         <button
           type="button"
-          onClick={() => { void window.nexusAPI?.shell?.showInFolder(project.path); }}
+          onClick={() => { void window.nexusAPI?.shell?.openFile(`${project.path}/CLAUDE.md`); }}
           style={ghostBtn}
         >
           <DocIcon /> Open CLAUDE.md
@@ -418,7 +418,7 @@ function SetupChecklist({ projectName, branch, hasWorktrees, projectPath }: Setu
     {
       done: false,
       text: <>CLAUDE.md in repo root · helps agents understand your project</>,
-      action: { label: 'Open', onClick: () => { void window.nexusAPI?.shell?.showInFolder(projectPath); } },
+      action: { label: 'Open', onClick: () => { void window.nexusAPI?.shell?.openFile(`${projectPath}/CLAUDE.md`); } },
     },
     {
       done: hasWorktrees,

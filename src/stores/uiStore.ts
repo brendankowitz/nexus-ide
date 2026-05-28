@@ -14,7 +14,7 @@ interface UIState {
   addProjectModalOpen: boolean;
   settingsModalOpen: boolean;
   expandedDiffFiles: Record<string, boolean>;
-  reviewedFiles: Record<string, { checkedAt: number; signature: string }>;
+  reviewedFiles: Record<string, { checkedAt: number; signature: string; state: 'approved' | 'changesRequested' | 'skipped' }>;
   lastKeyPressed: string | null;
   activeMode: AppMode;
   activeProvider: ProviderId;
@@ -35,8 +35,11 @@ interface UIActions {
   isDiffFileExpanded: (filePath: string) => boolean;
   setLastKeyPressed: (key: string | null) => void;
   reviewFile: (filePath: string, signature: string) => void;
+  skipFile: (filePath: string, signature: string) => void;
+  requestChangesForFile: (filePath: string, signature: string) => void;
   unreviewFile: (filePath: string) => void;
   isReviewedAndUnchanged: (filePath: string, signature: string) => boolean;
+  getFileReviewState: (filePath: string, signature: string) => 'approved' | 'changesRequested' | 'skipped' | 'unreviewed';
   purgeStaleReviews: (currentFiles: Array<{ filePath: string; signature: string }>) => void;
   setActiveMode: (mode: AppMode) => void;
   setActiveProvider: (provider: ProviderId) => void;
@@ -123,8 +126,18 @@ export const useUIStore = create<UIStore>()(
 
     reviewFile: (filePath, signature) =>
       set((state) => {
-        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature };
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'approved' };
         delete state.expandedDiffFiles[filePath];
+      }),
+
+    skipFile: (filePath, signature) =>
+      set((state) => {
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'skipped' };
+      }),
+
+    requestChangesForFile: (filePath, signature) =>
+      set((state) => {
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'changesRequested' };
       }),
 
     unreviewFile: (filePath) =>
@@ -134,7 +147,13 @@ export const useUIStore = create<UIStore>()(
 
     isReviewedAndUnchanged: (filePath, signature) => {
       const entry = get().reviewedFiles[filePath];
-      return !!entry && entry.signature === signature;
+      return !!entry && entry.signature === signature && entry.state === 'approved';
+    },
+
+    getFileReviewState: (filePath, signature) => {
+      const entry = get().reviewedFiles[filePath];
+      if (!entry || entry.signature !== signature) return 'unreviewed';
+      return entry.state;
     },
 
     purgeStaleReviews: (currentFiles) =>

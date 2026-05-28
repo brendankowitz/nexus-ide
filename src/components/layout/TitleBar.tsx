@@ -46,7 +46,7 @@ export const TitleBar = (): React.JSX.Element => {
       <div className="flex items-center gap-2 shrink-0 [-webkit-app-region:no-drag]">
         <NexusLogo size={18} />
         <span className="font-semibold text-[13px] tracking-[0.2px] text-[var(--v2-text)]">Nexus</span>
-        <span className="text-[11px] text-[var(--v2-text-faint)] mt-px">v2 · mission control</span>
+        <span className="text-[11px] text-[var(--v2-text-faint)] mt-px">· mission control</span>
       </div>
 
       <div className="h-[18px] w-px bg-[var(--v2-border)] shrink-0" />
