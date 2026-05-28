@@ -7,6 +7,7 @@ interface MCCommitLogProps {
   onOpen: (index: number) => void;
   branchName: string;
   loading: boolean;
+  error?: string | null;
 }
 
 /** Hash a string deterministically to one of the v2 palette colors for author badges. */
@@ -46,6 +47,7 @@ export const MCCommitLog = ({
   onOpen,
   branchName,
   loading,
+  error,
 }: MCCommitLogProps): React.JSX.Element => {
   return (
     <div
@@ -120,7 +122,19 @@ export const MCCommitLog = ({
           Loading commits…
         </div>
       )}
-      {!loading && commits.length === 0 && (
+      {!loading && error !== null && error !== undefined && (
+        <div
+          style={{
+            padding: '12px',
+            color: 'var(--v2-red)',
+            fontSize: 11,
+            fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
+          }}
+        >
+          Failed to load commit history
+        </div>
+      )}
+      {!loading && (error === null || error === undefined) && commits.length === 0 && (
         <div
           style={{
             padding: '12px',

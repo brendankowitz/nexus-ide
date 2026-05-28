@@ -8,6 +8,7 @@ interface MCChangedFilesProps {
   branchName: string;
   worktreeLabel: string;
   loading: boolean;
+  error?: string | null;
 }
 
 const STATUS_COLOR: Record<DiffFile['status'], string> = {
@@ -24,6 +25,7 @@ export const MCChangedFiles = ({
   branchName,
   worktreeLabel,
   loading,
+  error,
 }: MCChangedFilesProps): React.JSX.Element => {
   const [totalAdds, totalDels] = useMemo(() => {
     let a = 0;
@@ -119,7 +121,19 @@ export const MCChangedFiles = ({
           Loading changes…
         </div>
       )}
-      {!loading && files.length === 0 && (
+      {!loading && error !== null && error !== undefined && (
+        <div
+          style={{
+            padding: '12px',
+            color: 'var(--v2-red)',
+            fontSize: 11,
+            fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, monospace)',
+          }}
+        >
+          Failed to load changes
+        </div>
+      )}
+      {!loading && (error === null || error === undefined) && files.length === 0 && (
         <div
           style={{
             padding: '12px',

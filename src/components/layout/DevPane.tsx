@@ -355,7 +355,9 @@ export const DevPane = (): React.JSX.Element => {
             const mode = copilotCli?.['mode'] as string | undefined;
             if (mode) args = [...args, mode];
           }
-        } catch { /* settings unavailable — launch with defaults */ }
+        } catch (settingsErr) {
+          console.error('[DevPane] failed to read agent settings, launching with defaults:', settingsErr);
+        }
 
         const resolvedWorktreePath = option.worktreePath ?? activeProject.path;
 
@@ -397,8 +399,15 @@ export const DevPane = (): React.JSX.Element => {
 
   const handleKill = useCallback(
     async (sessionId: string) => {
-      await window.nexusAPI.terminal.kill(sessionId);
-      removeSession(sessionId);
+      try {
+        await window.nexusAPI.terminal.kill(sessionId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[DevPane] failed to kill session:', err);
+        useToastStore.getState().addToast(`Stop session failed: ${msg}`, 'error');
+      } finally {
+        removeSession(sessionId);
+      }
     },
     [removeSession],
   );

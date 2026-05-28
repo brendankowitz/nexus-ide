@@ -100,7 +100,9 @@ export const MCCommitSummary = ({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
           console.error('[MCCommitSummary] commitDiff failed:', err);
+          addToast(`Failed to load commit files: ${msg}`, 'error');
           setFiles([]);
         }
       })
@@ -111,7 +113,7 @@ export const MCCommitSummary = ({
     return () => {
       cancelled = true;
     };
-  }, [commit, projectId]);
+  }, [commit?.hash, projectId, addToast]);
 
   if (commit === null) {
     return (
@@ -143,6 +145,7 @@ export const MCCommitSummary = ({
       addToast(`Copied ${commit.hash.slice(0, 7)}`, 'success');
     } catch (err) {
       console.error('[MCCommitSummary] copy sha failed:', err);
+      addToast('Failed to copy SHA to clipboard', 'error');
     }
   };
 

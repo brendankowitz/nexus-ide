@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DiffHunk } from '@/components/git/DiffHunk';
+import { useToastStore } from '@/stores/toastStore';
 import type { Commit, DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
 interface MCCommitDrilldownProps {
@@ -97,6 +98,8 @@ export const MCCommitDrilldown = ({
   const [hunks, setHunks] = useState<DiffHunkType[]>([]);
   const [hunksLoading, setHunksLoading] = useState(false);
 
+  const addToast = useToastStore((s) => s.addToast);
+
   // Load file list for this commit.
   useEffect(() => {
     if (projectId === null) {
@@ -116,7 +119,9 @@ export const MCCommitDrilldown = ({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
           console.error('[MCCommitDrilldown] commitDiff failed:', err);
+          addToast(`Failed to load commit files: ${msg}`, 'error');
           setFiles([]);
         }
       })
@@ -127,7 +132,7 @@ export const MCCommitDrilldown = ({
     return () => {
       cancelled = true;
     };
-  }, [projectId, commit.hash]);
+  }, [projectId, commit.hash, addToast]);
 
   // Load hunks for the active file.
   const activeFile =
@@ -150,7 +155,9 @@ export const MCCommitDrilldown = ({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
           console.error('[MCCommitDrilldown] commitFileHunks failed:', err);
+          addToast(`Failed to load diff: ${msg}`, 'error');
           setHunks([]);
         }
       })
@@ -161,7 +168,7 @@ export const MCCommitDrilldown = ({
     return () => {
       cancelled = true;
     };
-  }, [projectId, commit.hash, activeFile]);
+  }, [projectId, commit.hash, activeFile?.filePath, addToast]);
 
   const initials = initialsOf(commit);
   const badgeColor = authorColor(initials, commit.isAIGenerated);
@@ -482,9 +489,9 @@ export const MCCommitDrilldown = ({
               </div>
             )}
             {activeFile !== undefined &&
-              hunks.map((hunk) => (
+              hunks.map((hunk, i) => (
                 <DiffHunk
-                  key={hunk.header}
+                  key={`${hunk.header}-${i}`}
                   hunk={hunk}
                   filePath={activeFile.filePath}
                 />

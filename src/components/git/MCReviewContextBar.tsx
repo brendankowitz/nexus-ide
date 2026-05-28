@@ -7,6 +7,7 @@ import {
   selectActiveStatus,
 } from '@/stores/projectStore';
 import { useUIStore, type ReviewTab } from '@/stores/uiStore';
+import { useToastStore } from '@/stores/toastStore';
 import { MCDropdown, type MCDropdownOption } from '@/components/git/MCDropdown';
 
 // ── Inline icons (kept local to avoid coupling) ───────────────────────────────
@@ -96,6 +97,7 @@ export const MCReviewContextBar = ({
 
   const reviewTab = useUIStore((s) => s.reviewTab);
   const setReviewTab = useUIStore((s) => s.setReviewTab);
+  const addToast = useToastStore((s) => s.addToast);
 
   // Determine the currently checked-out branch (from git status, fallback to HEAD branch).
   const currentBranchName = useMemo(() => {
@@ -196,7 +198,9 @@ export const MCReviewContextBar = ({
     try {
       await window.nexusAPI.git.checkout(activeProject.id, branchName);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[MCReviewContextBar] checkout failed:', err);
+      addToast(`Checkout failed: ${msg}`, 'error');
     }
   };
 

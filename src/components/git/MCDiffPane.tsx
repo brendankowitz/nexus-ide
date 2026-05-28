@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DiffHunk } from '@/components/git/DiffHunk';
 import { useUIStore } from '@/stores/uiStore';
+import { useToastStore } from '@/stores/toastStore';
 import type { DiffFile, DiffHunk as DiffHunkType } from '@/types';
 
 interface MCDiffPaneProps {
@@ -66,6 +67,8 @@ export const MCDiffPane = ({
   const [hunks, setHunks] = useState<DiffHunkType[]>([]);
   const [loading, setLoading] = useState(false);
   const reviewFile = useUIStore((s) => s.reviewFile);
+  const isReviewedAndUnchanged = useUIStore((s) => s.isReviewedAndUnchanged);
+  const addToast = useToastStore((s) => s.addToast);
 
   useEffect(() => {
     if (file === null) {
@@ -76,6 +79,7 @@ export const MCDiffPane = ({
     // If hunks were already provided inline, use them.
     if (file.hunks.length > 0) {
       setHunks(file.hunks);
+      setLoading(false);
       return;
     }
 
@@ -92,7 +96,9 @@ export const MCDiffPane = ({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
           console.error('[MCDiffPane] failed to load hunks:', err);
+          addToast(`Failed to load diff: ${msg}`, 'error');
           setHunks([]);
         }
       })
@@ -103,7 +109,7 @@ export const MCDiffPane = ({
     return () => {
       cancelled = true;
     };
-  }, [file, projectId, worktreePath]);
+  }, [file, projectId, worktreePath, addToast]);
 
   if (file === null) {
     return (
@@ -126,6 +132,7 @@ export const MCDiffPane = ({
 
   const hunkCount = hunks.length > 0 ? hunks.length : file.hunks.length;
   const signature = `${file.additions}-${file.deletions}`;
+  const isApproved = isReviewedAndUnchanged(file.filePath, signature);
 
   const handleApprove = (): void => {
     reviewFile(file.filePath, signature);
@@ -136,7 +143,9 @@ export const MCDiffPane = ({
     try {
       await window.nexusAPI.shell.showInFolder(file.filePath);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[MCDiffPane] showInFolder failed:', err);
+      addToast(`Failed to open in editor: ${msg}`, 'error');
     }
   };
 
@@ -197,11 +206,12 @@ export const MCDiffPane = ({
           onClick={handleApprove}
           style={{
             ...ghostButtonStyle,
-            color: 'var(--v2-green)',
+            color: isApproved ? '#0e1115' : 'var(--v2-green)',
             borderColor: 'var(--v2-green)',
+            background: isApproved ? 'var(--v2-green)' : 'transparent',
           }}
         >
-          <CheckIcon /> Approve
+          <CheckIcon /> {isApproved ? 'Approved' : 'Approve'}
         </button>
         <button
           type="button"
@@ -249,8 +259,8 @@ export const MCDiffPane = ({
             No diff to display
           </div>
         )}
-        {hunks.map((hunk) => (
-          <DiffHunk key={hunk.header} hunk={hunk} filePath={file.filePath} />
+        {hunks.map((hunk, i) => (
+          <DiffHunk key={`${hunk.header}-${i}`} hunk={hunk} filePath={file.filePath} />
         ))}
       </div>
     </div>

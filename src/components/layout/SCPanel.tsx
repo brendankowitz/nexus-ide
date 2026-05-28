@@ -7,6 +7,7 @@ import {
   selectActiveStatus,
 } from '@/stores/projectStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useToastStore } from '@/stores/toastStore';
 import { MCReviewContextBar } from '@/components/git/MCReviewContextBar';
 import { MCChangedFiles } from '@/components/git/MCChangedFiles';
 import { MCDiffPane } from '@/components/git/MCDiffPane';
@@ -42,12 +43,14 @@ export const SCPanel = (): React.JSX.Element => {
   // ── Changed files (working tree) ─────────────────
   const [changedFiles, setChangedFiles] = useState<DiffFile[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
 
   const loadDiff = useCallback(async (): Promise<void> => {
     if (activeProjectId === null) return;
     if (window.nexusAPI?.git === undefined) return;
     setFilesLoading(true);
+    setDiffError(null);
     try {
       const result = await window.nexusAPI.git.diff(
         activeProjectId,
@@ -56,7 +59,10 @@ export const SCPanel = (): React.JSX.Element => {
       setChangedFiles(result);
       setActiveFileIndex((idx) => (idx >= result.length ? 0 : idx));
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[SCPanel] failed to load diff:', err);
+      setDiffError(msg);
+      useToastStore.getState().addToast(`Failed to load diff: ${msg}`, 'error');
     } finally {
       setFilesLoading(false);
     }
@@ -71,6 +77,7 @@ export const SCPanel = (): React.JSX.Element => {
   // ── Commit log ───────────────────────────────────
   const [commits, setCommits] = useState<Commit[]>([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
+  const [commitsError, setCommitsError] = useState<string | null>(null);
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const [drilldownIndex, setDrilldownIndex] = useState<number | null>(null);
 
@@ -78,6 +85,7 @@ export const SCPanel = (): React.JSX.Element => {
     if (activeProjectId === null) return;
     if (window.nexusAPI?.git === undefined) return;
     setCommitsLoading(true);
+    setCommitsError(null);
     try {
       const result = await window.nexusAPI.git.log(
         activeProjectId,
@@ -87,7 +95,10 @@ export const SCPanel = (): React.JSX.Element => {
       setCommits(result);
       setActiveCommitIndex((idx) => (idx >= result.length ? 0 : idx));
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[SCPanel] failed to load commits:', err);
+      setCommitsError(msg);
+      useToastStore.getState().addToast(`Failed to load commits: ${msg}`, 'error');
     } finally {
       setCommitsLoading(false);
     }
@@ -97,10 +108,10 @@ export const SCPanel = (): React.JSX.Element => {
     void loadCommits();
   }, [loadCommits, gitStatus?.branch, reviewTab]);
 
-  // Reset drilldown when project or worktree changes.
+  // Reset drilldown when project, worktree, or tab changes.
   useEffect(() => {
     setDrilldownIndex(null);
-  }, [activeProjectId, activeWorktreePath]);
+  }, [activeProjectId, activeWorktreePath, reviewTab]);
 
   // ── Derived display values ───────────────────────
   const currentBranchName = useMemo(() => {
@@ -186,6 +197,7 @@ export const SCPanel = (): React.JSX.Element => {
               branchName={currentBranchName}
               worktreeLabel={worktreeLabel}
               loading={filesLoading}
+              error={diffError}
             />
             <MCDiffPane
               projectId={activeProjectId}
@@ -202,6 +214,7 @@ export const SCPanel = (): React.JSX.Element => {
               onOpen={setDrilldownIndex}
               branchName={currentBranchName}
               loading={commitsLoading}
+              error={commitsError}
             />
             <MCCommitSummary
               commit={activeCommit}
