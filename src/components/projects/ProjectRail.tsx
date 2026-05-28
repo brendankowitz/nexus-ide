@@ -57,20 +57,17 @@ const GroupHeader = ({ group, autoRename, onToggle, onRename, onDelete }: GroupH
   }
 
   return (
-    <div className="group/header flex items-center gap-1 px-2 py-1 mt-1">
-      {/* Chevron + name toggle */}
+    <div className="group/header flex items-center gap-1 px-3 py-1 mt-1">
+      {/* Colored dot + name toggle */}
       <button
         onClick={onToggle}
-        className="flex flex-1 items-center gap-1 min-w-0 text-left"
+        className="flex flex-1 items-center gap-1.5 min-w-0 text-left"
         title={group.collapsed ? 'Expand group' : 'Collapse group'}
       >
         <span
-          className={`inline-block text-[8px] text-text-ghost transition-transform duration-150 ${
-            group.collapsed ? '' : 'rotate-90'
-          }`}
-        >
-          ▶
-        </span>
+          className="inline-block w-2 h-2 rounded-[2px] shrink-0"
+          style={{ background: 'var(--v2-border)' }}
+        />
         {renaming ? (
           <input
             ref={inputRef}
@@ -82,7 +79,7 @@ const GroupHeader = ({ group, autoRename, onToggle, onRename, onDelete }: GroupH
             className="flex-1 min-w-0 bg-bg-void border border-border-strong rounded px-1 py-0.5 font-mono text-[10px] text-text-primary focus:outline-none focus:border-text-tertiary"
           />
         ) : (
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.5px] text-text-ghost group-hover/header:text-text-tertiary transition-colors truncate">
+          <span className="text-[10.5px] tracking-[0.4px] text-[var(--v2-text-faint)] group-hover/header:text-[var(--v2-text-dim)] transition-colors truncate">
             {group.name}
           </span>
         )}
@@ -224,34 +221,26 @@ export const ProjectRail = (): React.JSX.Element => {
 
   return (
     <>
-      <div className="flex w-[var(--rail-width)] min-w-[var(--rail-width)] flex-col overflow-hidden border-r border-border-subtle bg-bg-void">
+      <div className="flex w-[var(--rail-width)] min-w-[var(--rail-width)] flex-col overflow-hidden border-r border-[var(--v2-border)] bg-[var(--v2-bg1)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-3.5 pb-2 pt-3">
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-text-tertiary">
-            Projects
+        <div className="flex items-center justify-between px-3 pb-1.5 pt-2.5">
+          <span className="text-[11px] uppercase tracking-[0.6px] text-[var(--v2-text-faint)]">
+            Projects · {projects.length}
           </span>
-          <div className="flex items-center gap-1">
-            {/* Add group button */}
-            <button
-              onClick={handleAddGroup}
-              className="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[11px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
-              title="New group"
-            >
-              ⊞
-            </button>
-            {/* Add project button */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-transparent text-[12px] text-text-tertiary transition-all duration-[var(--duration-fast)] hover:border-text-secondary hover:bg-bg-hover hover:text-text-secondary"
-              title="Add project"
-            >
-              +
-            </button>
-          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center justify-center p-0.5 text-[var(--v2-text-faint)] hover:text-[var(--v2-text-dim)] transition-colors cursor-pointer"
+            title="Add project"
+            style={{ border: 'none', background: 'transparent' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
         </div>
 
         {/* Project list */}
-        <div className="flex-1 overflow-y-auto px-1.5 py-1 min-h-0">
+        <div className="flex-1 overflow-y-auto px-0 py-1 min-h-0">
           {!hasAnything ? (
             <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
               <span className="font-mono text-[11px] text-text-ghost">No projects yet</span>
@@ -325,12 +314,20 @@ export const ProjectRail = (): React.JSX.Element => {
           )}
         </div>
 
-        {/* Settings button — pinned to bottom */}
-        <div className="shrink-0 border-t border-border-subtle px-2 py-2">
+        {/* Footer: watcher count + settings */}
+        <div className="shrink-0 border-t border-[var(--v2-border-soft)] px-3 py-2">
+          {/* Agent/watcher summary */}
+          <div className="flex items-center gap-1.5 mb-1.5 font-mono text-[11px] text-[var(--v2-text-faint)]">
+            <span
+              className="inline-block w-[7px] h-[7px] rounded-full"
+              style={{ background: sessions.some(s => s.status === 'running') ? 'var(--v2-green)' : 'var(--v2-text-faint)' }}
+            />
+            <span>{sessions.filter(s => s.status !== 'exited').length} agents running</span>
+          </div>
           <button
             onClick={() => setSettingsModalOpen(true)}
             title="Settings (Ctrl+,)"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-text-tertiary transition-colors duration-[var(--duration-fast)] hover:bg-bg-hover hover:text-text-secondary"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-1 py-1 text-[var(--v2-text-faint)] transition-colors hover:text-[var(--v2-text-dim)]"
           >
             <GearIcon />
             <span className="font-mono text-[11px]">settings</span>

@@ -17,6 +17,7 @@ interface UIState {
   activeMode: AppMode;
   activeProvider: ProviderId;
   focusedSessionId: string | null;
+  newRunRequested: boolean;
 }
 
 interface UIActions {
@@ -37,6 +38,7 @@ interface UIActions {
   setActiveMode: (mode: AppMode) => void;
   setActiveProvider: (provider: ProviderId) => void;
   setFocusedSessionId: (id: string | null) => void;
+  setNewRunRequested: (v: boolean) => void;
 }
 
 type UIStore = UIState & UIActions;
@@ -52,6 +54,7 @@ const initialState = {
   activeMode: 'workbench' as AppMode,
   activeProvider: 'claude' as ProviderId,
   focusedSessionId: null,
+  newRunRequested: false,
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -149,6 +152,11 @@ export const useUIStore = create<UIStore>()(
     setFocusedSessionId: (id) =>
       set((state) => {
         state.focusedSessionId = id;
+      }),
+
+    setNewRunRequested: (v) =>
+      set((state) => {
+        state.newRunRequested = v;
       }),
   }))
 );

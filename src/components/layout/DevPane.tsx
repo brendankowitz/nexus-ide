@@ -129,6 +129,16 @@ export const DevPane = (): React.JSX.Element => {
     };
   }, [sessions, updateSession]);
 
+  // Open launch menu when requested from ContextBar "New run" button
+  const newRunRequested = useUIStore((s) => s.newRunRequested);
+  const setNewRunRequested = useUIStore((s) => s.setNewRunRequested);
+  useEffect(() => {
+    if (newRunRequested) {
+      setLaunchMenuOpen(true);
+      setNewRunRequested(false);
+    }
+  }, [newRunRequested, setNewRunRequested]);
+
   // Switch to the focused session when dispatched from the kanban board
   const focusedSessionId = useUIStore((s) => s.focusedSessionId);
   const setFocusedSessionId = useUIStore((s) => s.setFocusedSessionId);

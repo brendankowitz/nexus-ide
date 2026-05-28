@@ -11,7 +11,7 @@ export const App = (): React.JSX.Element => {
   useWatcher();
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg-base text-text-primary">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--v2-bg0)] text-[var(--v2-text)]">
       <TitleBar />
       <Shell />
       <CommandPalette />

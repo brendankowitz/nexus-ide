@@ -49,7 +49,7 @@
   /* Dimensions */
   --rail-width: 220px;
   --sc-panel-width: 380px;
-  --titlebar-height: 36px;
+  --titlebar-height: 38px;
   --tab-height: 38px;
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -250,4 +250,8 @@ body::after {
 @keyframes kanbanPulse {
   0%, 100% { opacity: 0.55; }
   50%       { opacity: 1; }
+}
+
+@keyframes mcBlink {
+  50% { opacity: 0; }
 }
