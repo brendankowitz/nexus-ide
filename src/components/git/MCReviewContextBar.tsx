@@ -7,7 +7,6 @@ import {
   selectActiveStatus,
 } from '@/stores/projectStore';
 import { useUIStore, type ReviewTab } from '@/stores/uiStore';
-import { useToastStore } from '@/stores/toastStore';
 import { MCDropdown, type MCDropdownOption } from '@/components/git/MCDropdown';
 
 // ── Inline icons (kept local to avoid coupling) ───────────────────────────────
@@ -71,6 +70,9 @@ const DiffIcon = (): React.JSX.Element => (
 interface MCReviewContextBarProps {
   changedFileCount: number;
   commitCount: number;
+  /** Currently selected comparison branch (owned by SCPanel). */
+  selectedBranch: string;
+  onBranchSelect: (branch: string) => void;
 }
 
 /** Shorten the prefix on branch refs for display. */
@@ -87,25 +89,17 @@ function worktreeLabel(path: string): string {
 export const MCReviewContextBar = ({
   changedFileCount,
   commitCount,
+  selectedBranch,
+  onBranchSelect,
 }: MCReviewContextBarProps): React.JSX.Element => {
-  const activeProject = useProjectStore(selectActiveProject);
   const branches = useProjectStore(selectActiveBranches);
   const worktrees = useProjectStore(selectActiveWorktrees);
-  const gitStatus = useProjectStore(selectActiveStatus);
   const activeWorktreePath = useProjectStore((s) => s.activeWorktreePath);
   const setActiveWorktreePath = useProjectStore((s) => s.setActiveWorktreePath);
+  const activeProject = useProjectStore(selectActiveProject);
 
   const reviewTab = useUIStore((s) => s.reviewTab);
   const setReviewTab = useUIStore((s) => s.setReviewTab);
-  const addToast = useToastStore((s) => s.addToast);
-
-  // Determine the currently checked-out branch (from git status, fallback to HEAD branch).
-  const currentBranchName = useMemo(() => {
-    if (gitStatus !== null) return stripBranchRef(gitStatus.branch);
-    const head = branches.find((b) => b.isHead);
-    if (head !== undefined) return stripBranchRef(head.name);
-    return branches[0]?.name !== undefined ? stripBranchRef(branches[0].name) : '—';
-  }, [branches, gitStatus]);
 
   // Currently active worktree (defaults to the main project root if not selected).
   const activeWorktree = useMemo(() => {
@@ -192,18 +186,6 @@ export const MCReviewContextBar = ({
     [worktrees],
   );
 
-  const handleBranchChange = async (branchName: string): Promise<void> => {
-    if (activeProject === null) return;
-    if (window.nexusAPI?.git === undefined) return;
-    try {
-      await window.nexusAPI.git.checkout(activeProject.id, branchName);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[MCReviewContextBar] checkout failed:', err);
-      addToast(`Checkout failed: ${msg}`, 'error');
-    }
-  };
-
   const handleWorktreeChange = (worktreePath: string): void => {
     const wt = worktrees.find((w) => w.path === worktreePath);
     if (wt !== undefined && wt.isMainWorktree) {
@@ -256,11 +238,9 @@ export const MCReviewContextBar = ({
       <MCDropdown
         icon={<BranchIcon />}
         label="Branch"
-        value={currentBranchName}
+        value={selectedBranch}
         options={branchOptions}
-        onChange={(v) => {
-          void handleBranchChange(v);
-        }}
+        onChange={onBranchSelect}
       />
 
       <MCDropdown

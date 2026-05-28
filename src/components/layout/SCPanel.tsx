@@ -121,6 +121,13 @@ export const SCPanel = (): React.JSX.Element => {
     return branches[0]?.name !== undefined ? stripBranchRef(branches[0].name) : '—';
   }, [branches, gitStatus]);
 
+  // Branch selected in the context bar dropdown — tracks which branch to use as
+  // the comparison label. Resets to HEAD whenever the actual branch changes.
+  const [selectedBranch, setSelectedBranch] = useState(currentBranchName);
+  useEffect(() => {
+    setSelectedBranch(currentBranchName);
+  }, [currentBranchName]);
+
   const activeWorktree = useMemo(() => {
     if (activeWorktreePath !== null) {
       const wt = worktrees.find((w) => w.path === activeWorktreePath);
@@ -178,6 +185,8 @@ export const SCPanel = (): React.JSX.Element => {
       <MCReviewContextBar
         changedFileCount={changedFiles.length}
         commitCount={commits.length}
+        selectedBranch={selectedBranch}
+        onBranchSelect={setSelectedBranch}
       />
 
       <div
@@ -194,7 +203,7 @@ export const SCPanel = (): React.JSX.Element => {
               files={changedFiles}
               activeIndex={activeFileIndex}
               onSelect={setActiveFileIndex}
-              branchName={currentBranchName}
+              branchName={selectedBranch}
               worktreeLabel={worktreeLabel}
               loading={filesLoading}
               error={diffError}
@@ -212,7 +221,7 @@ export const SCPanel = (): React.JSX.Element => {
               activeIndex={activeCommitIndex}
               onSelect={setActiveCommitIndex}
               onOpen={setDrilldownIndex}
-              branchName={currentBranchName}
+              branchName={selectedBranch}
               loading={commitsLoading}
               error={commitsError}
             />

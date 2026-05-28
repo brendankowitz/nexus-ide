@@ -150,17 +150,18 @@ const MCSessionStrip = ({ session, onKill, newButtonRef, onNew }: MCSessionStrip
 // ── SessionTabStrip ───────────────────────────────────────────────────────────
 
 interface SessionTabStripProps {
-  sessions: TerminalSession[];
+  projectSessions: TerminalSession[];
+  otherSessions: TerminalSession[];
   activeId: string | null;
   onSelect: (id: string) => void;
 }
 
-const SessionTabStrip = ({ sessions, activeId, onSelect }: SessionTabStripProps): React.JSX.Element => (
+const SessionTabStrip = ({ projectSessions, otherSessions, activeId, onSelect }: SessionTabStripProps): React.JSX.Element => (
   <div
     className="flex items-center gap-0.5 overflow-x-auto border-b border-[var(--v2-border-soft)] bg-[var(--v2-bg1)] px-2"
     style={{ height: 30, minHeight: 30 }}
   >
-    {sessions.map((s) => {
+    {projectSessions.map((s) => {
       const prov = getSessionProvider(s);
       const isActive = s.id === activeId;
       return (
@@ -182,6 +183,41 @@ const SessionTabStrip = ({ sessions, activeId, onSelect }: SessionTabStripProps)
         </button>
       );
     })}
+    {otherSessions.length > 0 && (
+      <>
+        <div className="mx-1 h-[14px] w-px shrink-0 bg-[var(--v2-border)]" />
+        {otherSessions.map((s) => {
+          const prov = getSessionProvider(s);
+          const isActive = s.id === activeId;
+          return (
+            <button
+              key={s.id}
+              onClick={() => onSelect(s.id)}
+              title={`${s.projectName ?? 'other project'} — ${s.label ?? prov.short}`}
+              className={`flex shrink-0 items-center gap-1.5 rounded px-2 font-mono text-[10.5px] transition-colors ${
+                isActive
+                  ? 'bg-[var(--v2-bg3)] text-[var(--v2-text)]'
+                  : 'text-[var(--v2-text-faint)] hover:bg-[var(--v2-bg2)] hover:text-[var(--v2-text-dim)]'
+              }`}
+              style={{ height: 22 }}
+            >
+              <span className="h-[5px] w-[5px] shrink-0 rounded-full opacity-50" style={{ background: prov.tint }} />
+              <span
+                className="max-w-[60px] truncate opacity-60"
+                style={{ fontSize: 9.5 }}
+              >
+                {s.projectName ?? '…'}
+              </span>
+              <span className="text-[var(--v2-border)] opacity-60">/</span>
+              <span className="max-w-[70px] truncate">{s.label ?? prov.short}</span>
+              {s.status === 'running' && (
+                <span className="h-[4px] w-[4px] shrink-0 animate-pulse rounded-full bg-[var(--v2-green)]" />
+              )}
+            </button>
+          );
+        })}
+      </>
+    )}
   </div>
 );
 
@@ -266,6 +302,10 @@ export const DevPane = (): React.JSX.Element => {
 
   const projectSessions = sessions.filter(
     (s) => activeProject !== null && s.projectId === activeProject.id,
+  );
+
+  const otherSessions = sessions.filter(
+    (s) => activeProject === null || s.projectId !== activeProject.id,
   );
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -433,10 +473,11 @@ export const DevPane = (): React.JSX.Element => {
         />
       )}
 
-      {/* Multi-session tab strip — only when there are 2+ project sessions */}
-      {projectSessions.length > 1 && (
+      {/* Multi-session tab strip — visible when there are 2+ project sessions or any other-project sessions */}
+      {(projectSessions.length > 1 || otherSessions.length > 0) && (
         <SessionTabStrip
-          sessions={projectSessions}
+          projectSessions={projectSessions}
+          otherSessions={otherSessions}
           activeId={activeSessionId}
           onSelect={handleSelectSession}
         />
