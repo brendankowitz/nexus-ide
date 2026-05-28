@@ -4,10 +4,12 @@ import type { ProviderId } from '@/stores/kanbanStore';
 
 export type { ProviderId };
 export type SCTab = 'branches' | 'worktrees' | 'diffs' | 'log';
+export type ReviewTab = 'changes' | 'history';
 export type AppMode = 'workbench' | 'kanban' | 'agents' | 'review';
 
 interface UIState {
   activeTab: SCTab;
+  reviewTab: ReviewTab;
   commandPaletteOpen: boolean;
   addProjectModalOpen: boolean;
   settingsModalOpen: boolean;
@@ -22,6 +24,7 @@ interface UIState {
 
 interface UIActions {
   setActiveTab: (tab: SCTab) => void;
+  setReviewTab: (tab: ReviewTab) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   toggleCommandPalette: () => void;
   setAddProjectModalOpen: (open: boolean) => void;
@@ -45,6 +48,7 @@ type UIStore = UIState & UIActions;
 
 const initialState = {
   activeTab: 'worktrees' as SCTab,
+  reviewTab: 'changes' as ReviewTab,
   commandPaletteOpen: false,
   addProjectModalOpen: false,
   settingsModalOpen: false,
@@ -64,6 +68,11 @@ export const useUIStore = create<UIStore>()(
     setActiveTab: (tab) =>
       set((state) => {
         state.activeTab = tab;
+      }),
+
+    setReviewTab: (tab) =>
+      set((state) => {
+        state.reviewTab = tab;
       }),
 
     setCommandPaletteOpen: (open) =>
