@@ -1,313 +1,293 @@
 <div align="center">
-  <img src="build/icon.png" alt="Nexus IDE Logo" width="128"/>
+  <img src="build/icon.png" alt="Nexus IDE Logo" width="120"/>
   <h1>Nexus IDE</h1>
   <p>
-    <b>Developer Mission Control — Project Orchestration for AI-Assisted Workflows</b>
+    <b>Developer Mission Control for AI-Assisted Engineering</b>
   </p>
 
-[![Electron](https://img.shields.io/badge/Electron-35+-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-39+-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://brendankowitz.github.io/nexus-ide/)
 
 </div>
 
 ---
 
-> **Project Status:** Early Development / Personal Project. Nexus is an opinionated developer tool exploring "mission control" UX for AI-assisted software engineering. Built for power users managing many repos, branches, worktrees, and agent sessions simultaneously.
+> **Project Status:** Early Development / Personal Project. Nexus is an opinionated developer tool exploring "mission control" UX for AI-assisted software engineering. Built for power users managing many repos, branches, worktrees, and agent sessions simultaneously. This project heavily uses the most advanced coding AI agents (with manual validation and code reviews) to implement and iterate quickly.
 
 ---
 
 ## Overview
 
-**Nexus** is an Electron-based desktop application built around **project orchestration**, not file editing.
-It solves the problem of managing many concurrent projects, branches, worktrees, and AI agent sessions by making the **project** the primary unit of navigation — with integrated terminals, rich git tooling, and a **Plan → Execute → Validate** pipeline for AI-assisted development.
+**Nexus** is an Electron desktop application built around **project orchestration**, not file editing. It solves the problem of managing many concurrent repositories, branches, worktrees, and AI agent runs by making the **project** the primary unit of navigation.
 
-Nexus is not a code editor. It is a **command center** that sits alongside your editor (VS Code, Rider, etc.) and gives you:
+You describe a task in plain language, dispatch it to an agent in an isolated worktree, watch it run with live status, and review what comes back — all from one window, across every repo you've registered.
 
-- Instant context-switching between projects with full git state visibility
-- First-class worktree management with per-worktree agent launching
-- Real terminal emulation with live AI agent telemetry (Claude Code, Copilot CLI, Aider)
-- Rich diff viewing, staging, committing, and code review from a single pane
-- A pipeline system for orchestrating AI agents across plan/execute/validate phases
+Nexus is not a code editor. It is a **command center** that sits beside your editor and handles the orchestration layer above it.
 
-**Target user**: A principal+ engineer managing 5–15+ active repositories, using AI coding agents daily, and working across multiple branches/worktrees simultaneously.
+**Target user**: A principal+ engineer managing 5–15+ active repositories, using AI coding agents daily, and working across multiple branches and worktrees simultaneously.
 
 <div align="center">
   <br/>
   <img src="docs/screenshot.jpg" alt="Nexus IDE Screenshot" width="900"/>
   <br/>
-  <em>Nexus IDE — project orchestration with integrated git, pipelines, and agent terminals</em>
+  <em>Nexus IDE — Workbench mode: dispatch a run, watch it live, review what comes back</em>
   <br/><br/>
 </div>
 
 ---
 
-## Key Features
+## ✨ Key Features
 
-### Project & Repository Management
+### 🖥️ Two Modes: Workbench & Review
 
-The **Project Rail** is a left sidebar that gives you at-a-glance visibility across all registered repos:
+The app has two top-level surfaces, switchable from the title bar:
 
-- **At-a-glance status** per project — current branch, change count, ahead/behind remote
+| Mode | What it's for |
+|------|--------------|
+| **Workbench** | Launch runs, watch live agent sessions, and manage the Project Rail, branches, and worktrees |
+| **Review** | Move through an agent's changed files hunk by hunk — approve, request changes, or skip |
+
+---
+
+### 📁 Project Rail
+
+The persistent left sidebar gives at-a-glance visibility across every registered repo:
+
+- **Live git state** per project — current branch, change count, worktree count, active agent sessions
 - **One-click context switching** — select a project and the entire UI pivots to its state
-- **Project groups** — create, rename, delete, and collapse/expand groups to organise repos by team, client, or domain
-- **Drag-and-drop ordering** within groups
-- **Directory scanning** — scan a root folder to discover and import all `.git` repos (3 levels deep, skips `node_modules`)
-- **Live file watching** via `@parcel/watcher` (native `ReadDirectoryChangesW` on Windows) — git state refreshes automatically when files change, no manual polling
-
-Projects and group layout are persisted across sessions via encrypted `electron-store`.
+- **Project groups** — create, rename, collapse/expand, and drag-to-reorder to manage density across many repos
+- **Directory scanning** — scan a root folder to discover all `.git` repos up to 3 levels deep (skips `node_modules`)
+- **Native file watching** via `@parcel/watcher` — git state refreshes automatically when files change on disk
 
 ---
 
-### Terminal Management
+### 🚀 Workbench — Start a Run
 
-Nexus embeds real terminal sessions directly in the UI — not a fake shell, a full PTY.
+The Workbench run launcher turns a plain-language task into a running agent:
 
-**Core:**
-- Real terminal emulation via [xterm.js](https://xtermjs.org/) with WebGL renderer (canvas fallback)
-- PTY process management via [@lydell/node-pty](https://github.com/nicolo-ribaudo/node-pty) with ConPTY on Windows
-- Shell auto-detection: `pwsh.exe` → `powershell.exe` → `cmd.exe` (Windows), `$SHELL` / `/bin/zsh` (macOS/Linux)
-- Right-click to copy selected text
+- Type what you want done, pick a **provider**, and press **Start run** — the agent launches in an isolated worktree
+- **Quick starts** — intent presets (Fix a bug, Add a feature, Write tests, Investigate, Refactor, Document) seed the prompt box
+- **Task templates** — worked example tasks tagged `feature`, `test`, `refactor`, `bug` you can dispatch directly or adapt
+- **Repo readiness check** — surfaces whether `CLAUDE.md` exists and whether worktrees are configured before the first run
+- **Live session** — once running, the agent streams into a real PTY terminal with status telemetry
 
-**PATH & environment:**
-- On launch, Nexus reads the full system PATH from the Windows Registry (via PowerShell) or from a login shell on macOS/Linux, then merges it into all spawned PTY processes — fixes the "command not found" problem common when launching Electron apps from a GUI shortcut
-- Dugite's bundled `git.exe` is appended as a guaranteed fallback on Windows
-- `CLAUDE_CODE_GIT_BASH_PATH` is auto-detected on Windows (dugite `sh.exe` → PATH entries → well-known Git for Windows locations) so Claude Code works without manual configuration
+#### Providers
 
-**Session experience:**
-- **Session types**: Claude Code, GitHub Copilot CLI, Aider, or any shell — each with its own color accent
-- **Launch menu** — quick-launch buttons for Shell, Claude Code, and Copilot; custom commands via the `custom…` menu
-- **Per-worktree sessions** — each terminal is bound to a specific worktree path, so agent sessions run in the right directory
-- **Session card strip** — a compact row of session cards above the terminal, click to switch between active sessions
-- **Elsewhere indicator** — when sessions are running in other projects, a `+N elsewhere` button surfaces them without losing context on the active project
-- **Smart PTY sizing** — terminal dimensions are estimated from the container size at spawn, so TUI apps (Copilot, Ink-based tools) render correctly on first draw
-
-**Live Claude Code telemetry:**
-
-When a session is running Claude Code, Nexus parses terminal output in real time to display:
-- **Model chip** — current Claude model (e.g. `sonnet`, `opus`) in a color-coded badge
-- **Context bar** — an animated progress bar showing context window fill %, with color thresholds (green → amber → red at 50%/80%)
-- **Ambient fill** — a background gradient behind the terminal header that grows as context fills
-- **Token counter** — running token count in a compact `tk` display
-
-These are parsed from PTY output via a best-effort regex (no API calls, no overhead) and update live as Claude writes to the terminal.
+| Provider | Status |
+|----------|--------|
+| <img src="https://img.shields.io/badge/CC-Claude%20Code-d97757"/> | ✅ Available — model and live status parsed from terminal output |
+| <img src="https://img.shields.io/badge/GH-Copilot-7c8cff"/> | ✅ Available — smart PTY sizing so Copilot's TUI renders correctly |
+| <img src="https://img.shields.io/badge/CX-Codex-10a37f"/> | 🔜 Coming soon |
+| <img src="https://img.shields.io/badge/GM-Gemini-4a90ff"/> | 🔜 Coming soon |
+| Custom CLI | 🔜 Coming soon |
 
 ---
 
-### Branch & Worktree Management
+### 🔀 Branches & Worktrees
 
-**Branch operations:**
-- List all local branches with upstream tracking info (ahead/behind remote)
-- List remote branches in a hierarchical tree view (`origin/*`)
-- Checkout, create, rename, and delete local branches
-- Fetch, pull, and push from the UI
-- Push with `--force-with-lease` (safe force push), with `--set-upstream` on first push
-- Set and unset upstream tracking per branch
-- Check out remote branches directly (creates a local tracking branch)
+Full branch and worktree management without dropping to a terminal:
 
-**Worktree management:**
-- Visualize all worktrees in a grid with branch name and dirty status
-- Create new worktrees (auto-creates the branch if it doesn't exist, or links to an existing one)
-- Remove worktrees with confirmation
-- The active worktree context is displayed as a pill in the terminal header and SCM panel, bridging the work ↔ review loop
+- List local branches with upstream tracking (ahead/behind remote)
+- List remote branches in a hierarchical `origin/*` tree
+- Checkout, create, rename, delete, fetch, pull, and push from the UI
+- Push with `--force-with-lease` (safe force), with `--set-upstream` on first push
+- Set and unset upstream tracking per branch; check out remote branches directly
+- **Worktree grid** — visualize all worktrees, create new ones (auto-creates the branch), remove with confirmation
+- The active worktree is shown as a pill in both the session header and the Review toolbar
 
-Git operations are powered by [dugite](https://github.com/desktop/dugite) — a bundled Git binary, so no system `git` in PATH is required.
+All git operations are powered by [dugite](https://github.com/desktop/dugite) — a bundled Git binary, so no system `git` in PATH is required.
 
 ---
 
-### Code Review & Validation
+### 🔍 Code Review
 
-**Diff viewer — three views:**
+A keyboard-driven review queue that works through an agent's output file by file:
 
-| View | Description |
-|------|-------------|
-| **List** | Flat file list with status badges (M/A/D/R), additions/deletions, sortable columns |
-| **Tree** | Hierarchical directory tree with aggregated stats per folder, collapsible |
-| **Groups** | AI-generated thematic groupings — files categorized by feature area (e.g. "Auth system", "UI components") |
+**Viewing changes:**
 
-**Hunk inspection:**
-- Click any file to expand per-hunk diffs inline
-- Syntax highlighting via [Shiki](https://shiki.matsu.io/) for readable code diffs
-- Open any file in a **Monaco Editor full-diff panel** for side-by-side old/new comparison with resizable columns
-- External diff tool support — configure any tool (meld, Beyond Compare, etc.) with `{original}` / `{modified}` path placeholders
+| View | What it shows |
+|------|--------------|
+| **List** | Flat file list with status badges (M/A/D/R) and additions/deletions |
+| **Tree** | Hierarchical directory tree with aggregated stats per folder |
+| **Groups** | AI-generated thematic groupings — files clustered by feature area |
+
+**Inspecting diffs:**
+- Per-hunk diffs inline with syntax highlighting via [Shiki](https://shiki.style/)
+- **Monaco Editor full-diff panel** — side-by-side old/new comparison for larger changes
+- External diff tool support — configure any tool with `{original}` / `{modified}` placeholders
+
+**Review queue — keyboard-driven:**
+
+| Key | Action |
+|-----|--------|
+| `J` / `K` | Navigate between files and hunks |
+| `A` | Approve & advance to next |
+| `R` | Request changes & advance |
+| `S` | Skip this file |
+| `N` | Jump to next unreviewed |
 
 **Staging & committing:**
-- Stage or unstage individual files
-- Stage all changes at once
+- Stage or unstage individual files, or stage everything at once
 - Revert a file (discard working-tree changes, restore from HEAD)
-- Commit with a message from the UI — returns the commit hash
-- All staging and commit operations are worktree-aware
+- Commit with a message from the UI — worktree-aware throughout
 
-**Commit log:**
-- Browse commit history with per-commit numstat (additions/deletions per file)
-- Click into any commit to inspect its changed files and diff hunks
-- Detects AI-generated commits (co-authored-by + bot keyword heuristic)
-- Displays parent refs, HEAD, tags, and remote tracking decorations
-- Human-readable time-ago timestamps
+**Commit history:**
+- Browse commits with per-file numstat (additions/deletions)
+- Drill into any commit to inspect its diff hunks
+- AI-authored commit detection via `Co-authored-by` trailers and bot keyword heuristics
 
 ---
 
-### Pipeline Engine (Plan → Execute → Validate)
+### ⚡ Live Terminal & Telemetry
 
-A three-phase orchestration system for AI-assisted development runs:
+Sessions are genuine PTY terminals — not a fake shell:
 
-| Phase | Purpose | Example Plugins |
-|-------|---------|-----------------|
-| **Plan** | Define what to build | `fn-investigation`, `claude-planner`, `spec-kit`, `custom-prompt` |
-| **Execute** | Build it | `fn-task`, `copilot-cli`, `aider`, `manual` |
-| **Validate** | Verify correctness | `fn-review`, `test-suite`, `build-deploy`, `adversarial`, `pr-summary` |
+- Real terminal emulation via [xterm.js](https://xtermjs.org/) (WebGL renderer, canvas fallback)
+- PTY managed by `@lydell/node-pty` (ConPTY on Windows)
+- Shell auto-detection: `pwsh.exe` → `powershell.exe` → `cmd.exe` (Windows); `$SHELL` / `/bin/zsh` (macOS/Linux)
+- **Smart PTY sizing** — dimensions estimated from container at spawn so TUI agents render correctly on first frame
+- **Full system PATH** — resolved from the Windows Registry or login shell at launch and merged into every PTY session; `CLAUDE_CODE_GIT_BASH_PATH` auto-detected on Windows
 
-- Each phase spawns a terminal session and streams output in real time
-- Pipeline runs auto-advance on success (plan → executing → validating)
-- Multiple validate steps can be chained with optional `continueOnFail`
-- Full run history per project with status per phase
-
-> **Note:** The user-defined plugin loader (`plugins/` directory) is planned but not yet implemented. Built-in plugins are available.
+**Live Claude Code telemetry** (parsed from terminal output, no API calls):
+- Model chip (e.g. `sonnet`, `opus`) in a color-coded badge on the session header
+- LIVE / IDLE state indicator and elapsed run time
+- Global agents-running count and CPU load in the status bar
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 Nexus follows a strict **Electron main/renderer split** with typed IPC and Zustand stores:
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Renderer Process (React + Zustand)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
-│  │ Project  │  │ Pipeline │  │ Terminal  │           │
-│  │ Store    │  │ Store    │  │ Store     │           │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘           │
-│       └──────────────┼──────────────┘                │
-│                      │ ipcRenderer.invoke()           │
-├──────────────────────┼───────────────────────────────┤
-│  Main Process        │                               │
-│  ┌──────────┐  ┌─────┴────┐  ┌──────────┐           │
-│  │ Git Ops  │  │ Pipeline │  │ Terminal  │           │
-│  │ (dugite) │  │ Engine   │  │ (node-pty)│           │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘           │
-│  ┌────┴─────┐  ┌────┴─────┐  ┌────┴──────┐          │
-│  │ Parcel   │  │ Plugin   │  │ Child     │          │
-│  │ Watcher  │  │ Registry │  │ Processes │          │
-│  └──────────┘  └──────────┘  └───────────┘          │
+│  Renderer Process (React 19 + Zustand + Tailwind)    │
+│                                                      │
+│   projectStore · terminalStore · uiStore             │
+│   kanbanStore · toastStore                           │
+│           │                                          │
+│           │  ipcRenderer.invoke()                    │
+├───────────┼──────────────────────────────────────────┤
+│  Main Process                                        │
+│                                                      │
+│   Git (dugite) · Terminals (node-pty)                │
+│   File watching (@parcel/watcher)                    │
+│   Settings (electron-store + safeStorage)            │
 └──────────────────────────────────────────────────────┘
 ```
 
 ### Technology Stack
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| Shell | Electron 35+ | Cross-platform desktop, native OS integration, pty access |
-| Build | electron-vite | Vite-based build for Electron; fast HMR, ESM support |
-| Packaging | electron-builder (NSIS) | Windows packaging, delta updates, code signing |
-| Frontend | React 19 + TypeScript | Component model, hooks, ecosystem |
-| State | Zustand | Slice-shaped stores for project/pipeline/terminal/ui domains |
-| Styling | Tailwind CSS 4 | Utility-first, rapid iteration, dark mode support |
-| Terminal | xterm.js + @lydell/node-pty | Real terminal emulation via ConPTY |
-| Git | dugite | Bundles Git binary — no system git PATH dependency |
-| File Watching | @parcel/watcher | Native `ReadDirectoryChangesW` on Windows |
-| Editor | Monaco Editor | Inline diff viewing and code display |
-| Syntax Highlight | Shiki | Diff hunk syntax highlighting |
-| Storage | electron-store + safeStorage | DPAPI encryption for sensitive values |
+| Layer | Technology |
+|-------|-----------|
+| Shell | Electron 39+ |
+| Build | electron-vite |
+| Packaging | electron-builder (NSIS / DMG) |
+| Frontend | React 19 + TypeScript 6 |
+| State | Zustand with Immer |
+| Styling | Tailwind CSS 4 |
+| Terminal | xterm.js + @lydell/node-pty (ConPTY) |
+| Git | dugite (bundled binary) |
+| File watching | @parcel/watcher |
+| Diff / editor | Monaco Editor |
+| Syntax highlight | Shiki |
+| Storage | electron-store + safeStorage (DPAPI on Windows) |
 
 ---
 
-## Quick Start
+## 🛠️ Quick Start
 
 ### Prerequisites
 
 - [Node.js 20+](https://nodejs.org/)
 - [npm 10+](https://www.npmjs.com/)
+- An agent CLI — [Claude Code](https://claude.ai/code) or [GitHub Copilot](https://cli.github.com/) (optional; required to launch runs)
+
+> **Note:** Git is bundled via dugite — no system `git` in PATH required.
 
 ### Development
 
 ```bash
-# 1. Clone the repository
+# 1. Clone
 git clone https://github.com/brendankowitz/nexus-ide.git
 cd nexus-ide
 
-# 2. Install dependencies
+# 2. Install
 npm install
 
-# 3. Start in development mode (with hot reload)
+# 3. Start with hot reload
 npm run dev
 ```
 
 ### Build & Package
 
 ```bash
-# Type-check
-npm run typecheck
-
-# Build for production
-npm run build
-
-# Package for Windows (NSIS installer)
-npm run package:win
+npm run typecheck      # type check
+npm run build          # production build
+npm run package:win    # Windows NSIS installer
+npm run package:mac    # macOS DMG + ZIP
 ```
 
 ### Testing
 
 ```bash
-# Run tests
-npm test
-
-# Watch mode
-npm run test:watch
+npm test               # run the suite
+npm run test:watch     # watch mode
 ```
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 nexus-ide/
 ├── electron/                  # Main process
 │   ├── main.ts               # Electron entry point
-│   ├── preload.ts            # contextBridge API
-│   ├── store.ts              # Persistent settings (electron-store)
-│   └── ipc/                  # IPC handlers
-│       ├── handlers.ts       # Central handler registration + channel registry
+│   ├── preload.ts            # contextBridge (window.nexusAPI)
+│   └── ipc/
+│       ├── handlers.ts       # IPC channel registry
 │       ├── git.ts            # Git operations (dugite)
-│       ├── terminal.ts       # PTY session management + PATH augmentation
-│       ├── watcher.ts        # File system watching (@parcel/watcher)
-│       ├── pipeline.ts       # Pipeline execution engine
-│       └── plugins.ts        # Plugin registry
-├── src/                       # Renderer process (React)
+│       └── terminal.ts       # PTY session management + PATH
+├── src/                       # Renderer (React)
 │   ├── components/
-│   │   ├── layout/           # Shell, TitleBar, DevPane, CommandPalette
-│   │   ├── projects/         # ProjectRail, ProjectCard, AddProjectModal
-│   │   ├── git/              # BranchList, WorktreeGrid, DiffViewer, CommitLog
-│   │   ├── terminals/        # AgentCard, TerminalTab, LaunchMenu
-│   │   └── shared/           # Badge, StatusDot, Tooltip
-│   ├── stores/               # Zustand state slices
-│   ├── hooks/                # React hooks for git, pipeline, terminal
-│   └── lib/                  # Utilities (diff parser, git helpers)
+│   │   ├── layout/           # Shell, TitleBar, ActivityPanel, StatusBar
+│   │   ├── projects/         # ProjectRail, ProjectCard
+│   │   ├── git/              # MCChangedFiles, MCCommitLog, MCDiffPane,
+│   │   │                     # MCQuickEditor, MCReviewContextBar
+│   │   ├── kanban/           # KanbanBoard, DispatchPanel, RunsStrip
+│   │   ├── agents/           # AgentsInbox
+│   │   ├── terminals/        # TerminalTab
+│   │   └── shared/           # NexusLogo, ProviderPicker, Badge
+│   └── stores/               # projectStore · terminalStore · uiStore
+│                             # kanbanStore · toastStore
+├── site/                      # Astro docs site (→ GitHub Pages)
 ├── docs/                      # Specification and design docs
 └── build/                     # App icons and build resources
 ```
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please see the project documentation in `docs/` for architecture details and design decisions.
+Contributions are welcome! See the `docs/` folder for architecture details and design decisions.
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit: `git commit -m 'feat: add my feature'`
+4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
 <p align="center">
-  <b>Nexus</b> — Developer Mission Control for the AI-Assisted Engineering Era.
+  <b>Nexus</b> — Command the swarm, not the windows.
 </p>
