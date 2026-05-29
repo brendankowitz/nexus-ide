@@ -68,7 +68,7 @@ jobs:
         shell: pwsh
 
       - name: Install Python setuptools (for node-gyp on Python 3.12+)
-        run: pip install setuptools
+        run: pip install setuptools --break-system-packages
 
       - name: Package Windows installer
         run: npm run package:win
@@ -136,7 +136,7 @@ jobs:
           iconutil -c icns build/icon.iconset -o build/icon.icns
 
       - name: Install Python setuptools (for node-gyp on Python 3.12+)
-        run: pip3 install setuptools
+        run: pip3 install setuptools --break-system-packages
 
       - name: Package macOS app (ARM64)
         run: npm run package:mac -- --arm64
@@ -217,7 +217,7 @@ jobs:
           iconutil -c icns build/icon.iconset -o build/icon.icns
 
       - name: Install Python setuptools (for node-gyp on Python 3.12+)
-        run: pip3 install setuptools
+        run: pip3 install setuptools --break-system-packages
 
       - name: Package macOS app (x64)
         run: npm run package:mac -- --x64
