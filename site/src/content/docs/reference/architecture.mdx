@@ -1,0 +1,54 @@
+---
+title: Architecture
+lead: "Nexus is an Electron app with a clean main/renderer split. The renderer owns the UI; the main process owns Git, PTYs, and filesystem watching."
+group: Reference
+order: 4
+---
+
+## Main / renderer split
+
+The renderer is a React app. Everything that touches the OS — Git, terminals, filesystem events — lives in the main process. They talk over Electron IPC.
+
+```text
+┌─────────────────────────────┐        ┌──────────────────────────────┐
+│  Renderer                   │        │  Main                        │
+│  React 19 + Zustand         │        │  git (dugite)                │
+│  xterm.js terminals         │  IPC   │  PTY (@lydell/node-pty)      │
+│  Monaco diff viewer         │ ─────▶ │  filesystem watcher          │
+│                             │        │  (@parcel/watcher)           │
+│  ipcRenderer.invoke(...) ───┼────────┤  ipcMain handlers            │
+└─────────────────────────────┘        └──────────────────────────────┘
+```
+
+The renderer never touches Git or the filesystem directly — it calls `ipcRenderer.invoke` and the main process does the work.
+
+## Technology stack
+
+| Layer | Technology |
+|-------|-----------|
+| Shell | **Electron 35+** |
+| Build | **electron-vite** |
+| Packaging | **electron-builder** (NSIS installer) |
+| UI | **React 19** + **TypeScript** |
+| State | **Zustand** |
+| Styling | **Tailwind 4** |
+| Terminals | **xterm.js** + **@lydell/node-pty** |
+| Git | **dugite** |
+| FS watching | **@parcel/watcher** |
+| Diff editor | **Monaco Editor** |
+| Syntax highlighting | **Shiki** |
+| Persistence | **electron-store** |
+
+## Repository layout
+
+```text
+nexus-ide/
+├── electron/    # main process: git, PTY, watcher, IPC handlers
+├── src/         # renderer: React UI, Zustand stores, components
+├── docs/        # project documentation
+└── build/       # packaging resources
+```
+
+<Callout type="note">
+The docs **site** you're reading lives separately under `site/` and is a static Astro build — it is not part of the Electron app's `src/` renderer.
+</Callout>

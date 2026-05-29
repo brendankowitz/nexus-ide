@@ -1,0 +1,39 @@
+---
+title: The mission-control model
+lead: "Nexus treats AI agents as a fleet you dispatch and review — not tools you drive keystroke by keystroke. The whole design follows from that shift."
+group: Core Concepts
+order: 1
+---
+
+## The shift
+
+AI coding agents changed the shape of the work. They are:
+
+- **Plural** — you run several at once, across several repos.
+- **Asynchronous** — you dispatch and come back, you don't babysit.
+- **Long-running** — a single task can churn for minutes.
+
+A row of terminal windows is the wrong interface for that. Mission control is the right one.
+
+## The project as the unit
+
+In Nexus, the **project** is the primary unit of navigation. Selecting a project performs a **one-click rebind** of the entire app: the rail, branches, worktrees, sessions, and review all snap to that repo. You are never reconstructing context across windows.
+
+## Two modes
+
+| Mode | Purpose |
+|------|---------|
+| **Workbench** | Dispatch runs, watch live sessions, manage projects, branches, and worktrees. |
+| **Review** | Walk an agent's diff hunk by hunk — approve, request changes, or skip. |
+
+## Principles
+
+| Principle | What it means |
+|-----------|---------------|
+| **Dispatch, don't drive** | You describe intent; the agent executes. Nexus optimizes the dispatch-and-review loop, not keystroke entry. |
+| **Provider choice per run** | Pick the agent per task. The same project can run Claude Code on one task and Copilot on the next. |
+| **Isolated by worktree** | Every run gets its own worktree, so concurrent agents never trample one working directory. |
+
+<Callout type="note">
+Nexus is **deliberately not an editor**. It does not compete with VS Code or Rider — it sits beside them and owns the parts they handle badly: fleet status, dispatch, and cross-repo review.
+</Callout>

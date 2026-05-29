@@ -1,0 +1,33 @@
+---
+title: Introduction
+lead: "Nexus is a developer mission control for AI-assisted workflows. It is built around running agents against your repos — not editing files — and sits alongside your editor as a command center."
+group: Getting Started
+order: 1
+---
+
+## What Nexus is
+
+Nexus is an Electron desktop application that makes the **project** the primary unit of navigation. It exists to solve one problem: managing many concurrent repositories, branches, worktrees, and AI agent runs without drowning in terminal windows.
+
+You describe a task in plain language, dispatch it to an agent in an isolated worktree, watch it run with live status, and review what comes back — all from one window, across every repo you've registered.
+
+<Callout type="note">
+**Nexus is not a code editor.** It is a command center that runs beside VS Code, Rider, or whatever you write code in. Think mission control, not IDE.
+</Callout>
+
+## Who it's for
+
+The target user is a principal+ engineer managing **5–15+ active repositories**, using AI coding agents daily, and working across multiple branches and worktrees simultaneously.
+
+## Two surfaces
+
+The app has two top-level modes, switchable from the title bar:
+
+| Mode | What it's for |
+|------|--------------|
+| **Workbench** | Launch runs, watch live agent sessions, and manage the Project Rail, branches, and worktrees. |
+| **Review** | Move through an agent's changed files hunk by hunk — approve, request changes, or skip. |
+
+## Where to go next
+
+If you just want to run it, jump to [Installation](/nexus-ide/docs/getting-started/installation). To understand the design first, read [The mission-control model](/nexus-ide/docs/concepts/mission-control). To dispatch your first agent, see [Starting a run](/nexus-ide/docs/workbench/start-a-run).

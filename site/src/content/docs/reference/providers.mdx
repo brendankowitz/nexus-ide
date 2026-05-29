@@ -1,0 +1,35 @@
+---
+title: Providers
+lead: "Providers are the agent CLIs Nexus dispatches runs to. Two are available today; more are on the way, chosen per run."
+group: Reference
+order: 1
+---
+
+## Available today
+
+| Provider | Code | Notes |
+|----------|------|-------|
+| **Claude Code** | CC | First-class. Model and live status parsed from output. |
+| **Copilot** | GH | Full TUI rendering with smart PTY sizing for the Ink-based UI. |
+
+## Coming soon
+
+| Provider | Code | Notes |
+|----------|------|-------|
+| **Codex** | CX | OpenAI's CLI agent, coming as a run provider. |
+| **Gemini** | GM | Google's CLI agent. |
+| **Custom** | — | Bring an arbitrary CLI agent. |
+
+<Callout type="note">
+Providers that aren't available yet show as **dimmed chips** in the launcher. You can see what's coming without being able to select it.
+</Callout>
+
+## Per-run choice
+
+Provider is a **per-run** decision, not a per-project setting. The same repo can run Claude Code on one task and Copilot on the next — pick the right agent for each job at dispatch time.
+
+## Authentication & PATH
+
+- **Authentication** comes from each agent's own machine-level CLI config — Nexus does not store provider credentials separately.
+- The resolved **PATH is merged into every session**, so agents launch with the environment they expect.
+- **`CLAUDE_CODE_GIT_BASH_PATH`** is honored so Claude Code's Git Bash dependency resolves correctly on Windows.

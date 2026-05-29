@@ -1,0 +1,37 @@
+---
+title: Configuration
+lead: "Where Nexus stores settings, how it orients agents, how it resolves your environment, and how to wire up an external diff tool."
+group: Reference
+order: 3
+---
+
+## Settings storage
+
+Configuration persists through **electron-store**. Sensitive values are encrypted at rest using Electron's **`safeStorage`**, which on Windows is backed by **DPAPI**.
+
+## CLAUDE.md
+
+A **CLAUDE.md** at a repository's root **orients agents** — it's the place to put repo conventions, architecture notes, and constraints. The run launcher **detects it** and flags whether the selected repo has one.
+
+## PATH & environment
+
+Nexus resolves your environment so agent CLIs launch correctly:
+
+- On **Windows**, PATH is read from the **Registry**; on macOS/Linux it's derived from a **login shell**.
+- The resolved environment is **merged into every PTY** session.
+- When no system Git is present, Nexus **falls back to dugite**'s bundled Git.
+- **`CLAUDE_CODE_GIT_BASH_PATH`** is honored so Claude Code finds Git Bash on Windows.
+
+## External diff tool
+
+Point Nexus at your preferred diff tool with a command template. Use `{original}` and `{modified}` placeholders for the two sides:
+
+```text
+meld {original} {modified}
+```
+
+Nexus substitutes the file paths into the command before launching it.
+
+<Callout type="tip">
+Any diff tool that takes two file path arguments works — just slot `{original}` and `{modified}` where the tool expects its left and right files.
+</Callout>

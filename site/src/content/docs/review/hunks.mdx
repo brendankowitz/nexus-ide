@@ -1,0 +1,38 @@
+---
+title: Hunks & diffs
+lead: "Changes render as inline hunks with syntax highlighting, with a full-file Monaco view a click away and external diff tools when you want them."
+group: Review
+order: 2
+---
+
+## Inline hunks
+
+Each changed file shows its hunks inline, with line numbers and **Shiki** syntax highlighting so the diff reads like code, not a wall of plus and minus signs.
+
+```diff
+ function upload(file) {
+-  return fetch(url, opts);
++  return retry(() => fetch(url, opts), {
++    attempts: 5,
++    backoff: 'exp',
++  });
+ }
+```
+
+## Full-file diff in Monaco
+
+When a hunk isn't enough context, open the full file in a **Monaco** diff editor — the same engine VS Code uses — rendered **side-by-side** so you can see the change against the whole file.
+
+## External diff tools
+
+Prefer your own diff tool? Nexus can hand off to an external program. Configure the command with placeholders for the two sides of the diff:
+
+```text
+meld {original} {modified}
+```
+
+Nexus substitutes `{original}` and `{modified}` with the file paths before launching the tool.
+
+<Callout type="note">
+The placeholder names are literal: use `{original}` for the base version and `{modified}` for the agent's version. They're substituted verbatim into your configured command.
+</Callout>

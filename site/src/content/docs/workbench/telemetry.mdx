@@ -1,0 +1,32 @@
+---
+title: Run status & telemetry
+lead: "Nexus reads agent status straight from terminal output. No API calls, no polling endpoints — just the stream the agent is already producing."
+group: Workbench
+order: 4
+---
+
+## How it works
+
+Telemetry is derived from **terminal output parsing**. Nexus watches the session's output stream and extracts status from it — there are **no API calls** to provider backends and no separate polling. If the agent prints it, Nexus can surface it.
+
+## Signals
+
+| Signal | Source |
+|--------|--------|
+| **Provider + model** | Parsed from agent banner / output. |
+| **Live / idle** | Whether the session is actively producing output. |
+| **Elapsed time** | Wall-clock since the run started. |
+| **Agents running** | Count of active sessions per project. |
+| **CPU** | Process CPU usage for the session. |
+
+## Status bar format
+
+The status bar condenses the active project's state into one line:
+
+```text
+web-dashboard · feature/upload-flow · LIVE · 1 agent · cpu 17%
+```
+
+<Callout type="note">
+Because telemetry comes from output parsing rather than a provider API, it works for any CLI agent that streams to its terminal — no per-provider integration required.
+</Callout>

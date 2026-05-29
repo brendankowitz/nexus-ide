@@ -1,0 +1,23 @@
+
+export default new Map([
+["src/content/docs/concepts/mission-control.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fmission-control.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/projects.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fprojects.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/worktrees.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fworktrees.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/installation.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Finstallation.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/sessions.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fsessions.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/introduction.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Fintroduction.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/first-project.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Ffirst-project.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/architecture.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Farchitecture.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/configuration.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fconfiguration.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/providers.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fproviders.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/shortcuts.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fshortcuts.mdx&astroContentModuleFlag=true")],
+["src/content/docs/workbench/branches.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fworkbench%2Fbranches.mdx&astroContentModuleFlag=true")],
+["src/content/docs/workbench/start-a-run.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fworkbench%2Fstart-a-run.mdx&astroContentModuleFlag=true")],
+["src/content/docs/workbench/project-rail.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fworkbench%2Fproject-rail.mdx&astroContentModuleFlag=true")],
+["src/content/docs/workbench/telemetry.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fworkbench%2Ftelemetry.mdx&astroContentModuleFlag=true")],
+["src/content/docs/workbench/terminals.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fworkbench%2Fterminals.mdx&astroContentModuleFlag=true")],
+["src/content/docs/review/commit-log.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freview%2Fcommit-log.mdx&astroContentModuleFlag=true")],
+["src/content/docs/review/diff-viewer.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freview%2Fdiff-viewer.mdx&astroContentModuleFlag=true")],
+["src/content/docs/review/hunks.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freview%2Fhunks.mdx&astroContentModuleFlag=true")],
+["src/content/docs/review/staging.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freview%2Fstaging.mdx&astroContentModuleFlag=true")]]);
+		

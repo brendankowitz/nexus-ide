@@ -1,0 +1,46 @@
+---
+title: Your first run
+lead: "Add a project, switch context with one click, describe a task, and dispatch it to an agent. This is the core loop Nexus is built around."
+group: Getting Started
+order: 3
+---
+
+## Add a project
+
+There are two ways to register repositories:
+
+- **Add one** — click the **+** control and pick a repository folder.
+- **Scan a root** — point Nexus at a parent directory and it walks up to **three levels deep**, registering every Git repo it finds. It skips `node_modules` so a monorepo scan stays fast.
+
+## Switch context
+
+Every registered repo appears in the **Project Rail**. Click any entry to rebind the entire app — branches, worktrees, sessions, and review all follow the selected project. One click, no window juggling.
+
+## Start a run
+
+In the Workbench, the run launcher is the default surface:
+
+1. Type the task in plain language — *"Add retry logic to the upload flow."*
+2. Pick a provider (Claude Code, Copilot, …).
+3. Click **Start run**.
+
+Nexus creates an isolated worktree, opens a live session, and begins streaming agent output.
+
+## Set up this repo
+
+For best results, prepare the repository once:
+
+- Add a **CLAUDE.md** at the repo root to orient agents. The launcher detects it and surfaces a checkmark.
+- Configure **worktrees** so parallel runs don't collide on a single working directory.
+
+## The work loop
+
+1. **Describe** the task and pick a provider.
+2. **Dispatch** — Nexus spins up an isolated worktree and a live session.
+3. **Watch** live telemetry (model, status, elapsed) in the rail and status bar.
+4. **Review** the agent's changed files hunk by hunk in Review mode.
+5. **Approve, commit, or request changes** — then start the next run.
+
+<Callout type="tip">
+Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to jump to any project or run without reaching for the mouse.
+</Callout>

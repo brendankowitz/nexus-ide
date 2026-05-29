@@ -1,0 +1,15 @@
+---
+interface Props {
+  desc: string;
+}
+const { desc } = Astro.props;
+---
+<div class="keyrow">
+  <span class="keyrow-desc">{desc}</span>
+  <span class="keyrow-combo"><slot /></span>
+</div>
+
+<style>
+  .keyrow-desc { color: var(--ink-dim); }
+  .keyrow-combo { display: inline-flex; gap: 6px; align-items: center; }
+</style>

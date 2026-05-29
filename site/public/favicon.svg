@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nxw-fav" x1="29" y1="29" x2="71" y2="71" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d97757"/><stop offset="20%" stop-color="#d97757"/>
+      <stop offset="20%" stop-color="#7c8cff"/><stop offset="40%" stop-color="#7c8cff"/>
+      <stop offset="40%" stop-color="#10a37f"/><stop offset="60%" stop-color="#10a37f"/>
+      <stop offset="60%" stop-color="#4a90ff"/><stop offset="80%" stop-color="#4a90ff"/>
+      <stop offset="80%" stop-color="#b87bff"/><stop offset="100%" stop-color="#b87bff"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="22.5" fill="#1a1d22"/>
+  <rect x="22" y="22" width="14" height="56" rx="2.5" fill="#f4ede0"/>
+  <rect x="64" y="22" width="14" height="56" rx="2.5" fill="#f4ede0"/>
+  <line x1="29" y1="29" x2="71" y2="71" stroke="url(#nxw-fav)" stroke-width="14"/>
+  <rect x="22" y="22" width="14" height="23.5" rx="2.5" fill="#f4ede0"/>
+  <rect x="64" y="54.5" width="14" height="23.5" rx="2.5" fill="#f4ede0"/>
+</svg>

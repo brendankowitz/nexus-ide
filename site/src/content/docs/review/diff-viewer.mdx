@@ -1,0 +1,38 @@
+---
+title: Reviewing changes
+lead: "Review mode is where you inspect what an agent produced. Select a repo, branch, and worktree, then walk the changed files."
+group: Review
+order: 1
+---
+
+## Review toolbar
+
+The toolbar scopes what you're reviewing:
+
+- **Repo / branch / worktree** selectors bind review to a specific working context.
+- A **Working changes / History** toggle switches between uncommitted work and committed history.
+
+## Changed-files list
+
+The changed files appear with a status badge each:
+
+| Badge | Status |
+|-------|--------|
+| `M` | Modified |
+| `A` | Added |
+| `D` | Deleted |
+| `R` | Renamed |
+
+A **review counter** tracks how many files you've gone through, and **next unreviewed** jumps you to the first file you haven't looked at yet.
+
+## Three views
+
+| View | Best for |
+|------|----------|
+| **List** | A flat, fast scan of every changed file. |
+| **Tree** | Seeing changes in their directory structure. |
+| **Groups** | Clustering related changes for a logical review pass. |
+
+<Callout type="tip">
+For a large agent run, switch to **Groups** view — reviewing related changes together is far faster than going file by file in a flat list.
+</Callout>

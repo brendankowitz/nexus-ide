@@ -1,0 +1,34 @@
+---
+title: The review queue
+lead: "Approve & Next turns review into a keyboard-driven queue. Stage, commit, and move through changes without touching the mouse."
+group: Review
+order: 3
+---
+
+## Approve & Next
+
+The queue is built around momentum. **Approve & Next** marks the current file reviewed and jumps to the next one in a single action, so you keep moving through an agent's output instead of hunting for what's left.
+
+## Keyboard shortcuts
+
+<Keys>
+  <KeyRow desc="Navigate to next / previous file"><kbd>J</kbd> <kbd>K</kbd></KeyRow>
+  <KeyRow desc="Approve and jump to next"><kbd>A</kbd></KeyRow>
+  <KeyRow desc="Request changes"><kbd>R</kbd></KeyRow>
+  <KeyRow desc="Skip this file"><kbd>S</kbd></KeyRow>
+  <KeyRow desc="Jump to next unreviewed"><kbd>N</kbd></KeyRow>
+</Keys>
+
+## Staging & committing
+
+From the queue you can:
+
+- **Stage** or **unstage** individual files, or all at once.
+- **Revert** a file's changes.
+- **Commit** the staged set.
+
+Every operation is **worktree-aware**, so staging and committing always target the worktree the run is bound to — never the wrong working directory.
+
+<Callout type="warn">
+**Revert is destructive.** It discards the file's working changes and cannot be undone from within Nexus. Make sure you mean it before reverting an agent's work.
+</Callout>
