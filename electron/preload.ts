@@ -97,6 +97,8 @@ const CH = {
   PLUGINS_LIST: 'plugins:list',
   PLUGINS_LOAD_USER: 'plugins:load-user',
 
+  GIT_WRITE_FILE: 'git:write-file',
+
   SHELL_DETECT: 'shell:detect',
   DIALOG_OPEN_DIR: 'dialog:open-dir',
   SHELL_SHOW_IN_FOLDER: 'shell:show-in-folder',
@@ -204,8 +206,8 @@ const nexusAPIImpl = {
     commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]> {
       return ipcRenderer.invoke(CH.GIT_COMMIT_FILE_HUNKS, projectId, commitHash, filePath) as Promise<DiffHunk[]>;
     },
-    log(projectId: string, count?: number, worktreePath?: string): Promise<Commit[]> {
-      return ipcRenderer.invoke(CH.GIT_LOG, projectId, count, worktreePath) as Promise<Commit[]>;
+    log(projectId: string, count?: number, worktreePath?: string, branch?: string): Promise<Commit[]> {
+      return ipcRenderer.invoke(CH.GIT_LOG, projectId, count, worktreePath, branch) as Promise<Commit[]>;
     },
     stage(projectId: string, filePath: string, worktreePath?: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_STAGE, projectId, filePath, worktreePath) as Promise<void>;
@@ -230,6 +232,9 @@ const nexusAPIImpl = {
     },
     launchExternalDiff(projectId: string, filePath: string, fileStatus: 'M' | 'A' | 'D' | 'R', worktreePath?: string): Promise<void> {
       return ipcRenderer.invoke(CH.GIT_LAUNCH_EXTERNAL_DIFF, projectId, filePath, fileStatus, worktreePath) as Promise<void>;
+    },
+    writeFile(projectId: string, filePath: string, content: string): Promise<void> {
+      return ipcRenderer.invoke(CH.GIT_WRITE_FILE, projectId, filePath, content) as Promise<void>;
     },
   },
 
@@ -340,6 +345,9 @@ const nexusAPIImpl = {
   shell: {
     showInFolder(path: string): Promise<void> {
       return ipcRenderer.invoke(CH.SHELL_SHOW_IN_FOLDER, path) as Promise<void>;
+    },
+    openFile(path: string): Promise<string> {
+      return ipcRenderer.invoke('shell:open-file', path) as Promise<string>;
     },
   },
 

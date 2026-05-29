@@ -125,23 +125,19 @@ export const ProjectCard = ({
     <div
       onClick={onClick}
       onContextMenu={handleContextMenu}
-      className={`relative mb-0.5 cursor-pointer rounded-[var(--radius-md)] px-2.5 py-2 transition-colors duration-[var(--duration-fast)] ${
-        active ? 'bg-bg-surface' : 'hover:bg-bg-hover'
+      className={`relative mb-0.5 cursor-pointer px-2.5 py-2 transition-colors duration-[var(--duration-fast)] ${
+        active ? 'bg-[var(--v2-bg3)]' : 'hover:bg-[var(--v2-bg2)]'
       }`}
+      style={active ? { borderLeft: '2px solid var(--v2-amber)' } : { borderLeft: '2px solid transparent' }}
     >
-      {/* Active indicator bar */}
-      {active && (
-        <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-sm bg-phase-plan" />
-      )}
-
       {/* Project name */}
-      <div className="truncate font-mono text-[12px] font-medium text-text-primary mb-[3px]">
+      <div className={`truncate font-mono text-[12.5px] font-medium mb-[3px] ${active ? 'text-[var(--v2-text)]' : 'text-[var(--v2-text-dim)]'}`}>
         {project.name}
       </div>
 
       {/* Meta row: branch + badges */}
-      <div className="flex items-center gap-1.5 font-mono text-[10px] text-text-tertiary">
-        <span className="max-w-[100px] truncate text-text-secondary">
+      <div className="flex items-center gap-1.5 font-mono text-[10px] text-[var(--v2-text-faint)]">
+        <span className="max-w-[100px] truncate text-[var(--v2-text-faint)]">
           {displayBranch}
         </span>
 

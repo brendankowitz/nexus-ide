@@ -351,13 +351,14 @@ export interface NexusAPI {
     diffHunks(projectId: string, filePath: string, worktreePath?: string): Promise<DiffHunk[]>;
     commitDiff(projectId: string, commitHash: string): Promise<DiffFile[]>;
     commitFileHunks(projectId: string, commitHash: string, filePath: string): Promise<DiffHunk[]>;
-    log(projectId: string, count?: number, worktreePath?: string): Promise<Commit[]>;
+    log(projectId: string, count?: number, worktreePath?: string, branch?: string): Promise<Commit[]>;
     status(projectId: string, worktreePath?: string): Promise<GitStatus>;
     stage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     unstage(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     stageAll(projectId: string, worktreePath?: string): Promise<void>;
     commit(projectId: string, message: string, worktreePath?: string): Promise<string>;
     fileContent(projectId: string, filePath: string): Promise<{ head: string | null; working: string }>;
+    writeFile(projectId: string, filePath: string, content: string): Promise<void>;
     revertFile(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     deleteFile(projectId: string, filePath: string, worktreePath?: string): Promise<void>;
     launchExternalDiff(projectId: string, filePath: string, fileStatus: 'M' | 'A' | 'D' | 'R', worktreePath?: string): Promise<void>;
@@ -405,6 +406,7 @@ export interface NexusAPI {
   // Shell / Platform utilities
   shell: {
     showInFolder(path: string): Promise<void>;
+    openFile(path: string): Promise<string>;
   };
 
   // File system events (pushed from main → renderer)

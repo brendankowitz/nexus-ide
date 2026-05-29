@@ -1,20 +1,30 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import type { ProviderId } from '@/stores/kanbanStore';
 
+export type { ProviderId };
 export type SCTab = 'branches' | 'worktrees' | 'diffs' | 'log';
+export type ReviewTab = 'changes' | 'history';
+export type AppMode = 'workbench' | 'kanban' | 'agents' | 'review';
 
 interface UIState {
   activeTab: SCTab;
+  reviewTab: ReviewTab;
   commandPaletteOpen: boolean;
   addProjectModalOpen: boolean;
   settingsModalOpen: boolean;
   expandedDiffFiles: Record<string, boolean>;
-  reviewedFiles: Record<string, { checkedAt: number; signature: string }>;
+  reviewedFiles: Record<string, { checkedAt: number; signature: string; state: 'approved' | 'changesRequested' | 'skipped' }>;
   lastKeyPressed: string | null;
+  activeMode: AppMode;
+  activeProvider: ProviderId;
+  focusedSessionId: string | null;
+  newRunRequested: boolean;
 }
 
 interface UIActions {
   setActiveTab: (tab: SCTab) => void;
+  setReviewTab: (tab: ReviewTab) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   toggleCommandPalette: () => void;
   setAddProjectModalOpen: (open: boolean) => void;
@@ -25,21 +35,33 @@ interface UIActions {
   isDiffFileExpanded: (filePath: string) => boolean;
   setLastKeyPressed: (key: string | null) => void;
   reviewFile: (filePath: string, signature: string) => void;
+  skipFile: (filePath: string, signature: string) => void;
+  requestChangesForFile: (filePath: string, signature: string) => void;
   unreviewFile: (filePath: string) => void;
   isReviewedAndUnchanged: (filePath: string, signature: string) => boolean;
+  getFileReviewState: (filePath: string, signature: string) => 'approved' | 'changesRequested' | 'skipped' | 'unreviewed';
   purgeStaleReviews: (currentFiles: Array<{ filePath: string; signature: string }>) => void;
+  setActiveMode: (mode: AppMode) => void;
+  setActiveProvider: (provider: ProviderId) => void;
+  setFocusedSessionId: (id: string | null) => void;
+  setNewRunRequested: (v: boolean) => void;
 }
 
 type UIStore = UIState & UIActions;
 
 const initialState = {
   activeTab: 'worktrees' as SCTab,
+  reviewTab: 'changes' as ReviewTab,
   commandPaletteOpen: false,
   addProjectModalOpen: false,
   settingsModalOpen: false,
   expandedDiffFiles: {} as Record<string, boolean>,
   reviewedFiles: {} as Record<string, { checkedAt: number; signature: string }>,
   lastKeyPressed: null,
+  activeMode: 'workbench' as AppMode,
+  activeProvider: 'claude' as ProviderId,
+  focusedSessionId: null,
+  newRunRequested: false,
 } satisfies UIState;
 
 export const useUIStore = create<UIStore>()(
@@ -49,6 +71,11 @@ export const useUIStore = create<UIStore>()(
     setActiveTab: (tab) =>
       set((state) => {
         state.activeTab = tab;
+      }),
+
+    setReviewTab: (tab) =>
+      set((state) => {
+        state.reviewTab = tab;
       }),
 
     setCommandPaletteOpen: (open) =>
@@ -99,8 +126,18 @@ export const useUIStore = create<UIStore>()(
 
     reviewFile: (filePath, signature) =>
       set((state) => {
-        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature };
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'approved' };
         delete state.expandedDiffFiles[filePath];
+      }),
+
+    skipFile: (filePath, signature) =>
+      set((state) => {
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'skipped' };
+      }),
+
+    requestChangesForFile: (filePath, signature) =>
+      set((state) => {
+        state.reviewedFiles[filePath] = { checkedAt: Date.now(), signature, state: 'changesRequested' };
       }),
 
     unreviewFile: (filePath) =>
@@ -110,7 +147,13 @@ export const useUIStore = create<UIStore>()(
 
     isReviewedAndUnchanged: (filePath, signature) => {
       const entry = get().reviewedFiles[filePath];
-      return !!entry && entry.signature === signature;
+      return !!entry && entry.signature === signature && entry.state === 'approved';
+    },
+
+    getFileReviewState: (filePath, signature) => {
+      const entry = get().reviewedFiles[filePath];
+      if (!entry || entry.signature !== signature) return 'unreviewed';
+      return entry.state;
     },
 
     purgeStaleReviews: (currentFiles) =>
@@ -122,6 +165,26 @@ export const useUIStore = create<UIStore>()(
             delete state.reviewedFiles[fp];
           }
         }
+      }),
+
+    setActiveMode: (mode) =>
+      set((state) => {
+        state.activeMode = mode;
+      }),
+
+    setActiveProvider: (provider) =>
+      set((state) => {
+        state.activeProvider = provider;
+      }),
+
+    setFocusedSessionId: (id) =>
+      set((state) => {
+        state.focusedSessionId = id;
+      }),
+
+    setNewRunRequested: (v) =>
+      set((state) => {
+        state.newRunRequested = v;
       }),
   }))
 );

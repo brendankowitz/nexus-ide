@@ -39,6 +39,7 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
+import { spawn } from 'node:child_process';
 
 import {
   getStatus,
@@ -66,6 +67,7 @@ import {
   stageAll,
   commit,
   getFileContent,
+  writeFileContent,
   revertFile,
   deleteFile,
   launchExternalDiff,
@@ -160,6 +162,7 @@ export const IPC_CHANNELS = {
   GIT_REVERT_FILE: 'git:revert-file',
   GIT_DELETE_FILE: 'git:delete-file',
   GIT_LAUNCH_EXTERNAL_DIFF: 'git:launch-external-diff',
+  GIT_WRITE_FILE: 'git:write-file',
 
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
@@ -182,6 +185,7 @@ export const IPC_CHANNELS = {
   SHELL_DETECT: 'shell:detect',
   DIALOG_OPEN_DIR: 'dialog:open-dir',
   SHELL_SHOW_IN_FOLDER: 'shell:show-in-folder',
+  SHELL_OPEN_FILE: 'shell:open-file',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
@@ -610,10 +614,11 @@ export function registerIpcHandlers(): void {
       projectId: string,
       count?: number,
       worktreePath?: string,
+      branch?: string,
     ): Promise<Commit[]> => {
       try {
         const projectPath = resolveProjectPath(projectId);
-        return await getLog(worktreePath ?? projectPath, count);
+        return await getLog(worktreePath ?? projectPath, count, branch);
       } catch (err) {
         throwIpcError('GIT_LOG_FAILED', err);
       }
@@ -704,6 +709,18 @@ export function registerIpcHandlers(): void {
         return await getFileContent(projectPath, filePath);
       } catch (err) {
         throwIpcError('GIT_FILE_CONTENT_FAILED', err);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_WRITE_FILE,
+    async (_event, projectId: string, filePath: string, content: string): Promise<void> => {
+      try {
+        const projectPath = resolveProjectPath(projectId);
+        await writeFileContent(projectPath, filePath, content);
+      } catch (err) {
+        throwIpcError('GIT_WRITE_FILE_FAILED', err);
       }
     },
   );
@@ -943,6 +960,21 @@ export function registerIpcHandlers(): void {
     IPC_CHANNELS.SHELL_SHOW_IN_FOLDER,
     async (_event, path: string): Promise<void> => {
       shell.showItemInFolder(path.replace(/\//g, '\\'));
+    },
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SHELL_OPEN_FILE,
+    async (_event, path: string): Promise<string> => {
+      const editorConfig = store.get('editor') as { command?: string; args?: string[] } | undefined;
+      const command = editorConfig?.command?.trim() || 'code';
+      const args = [...(editorConfig?.args ?? ['--goto']), path.replace(/\//g, '\\')];
+      return new Promise((resolve) => {
+        const proc = spawn(command, args, { detached: true, stdio: 'ignore', shell: true });
+        proc.on('error', (err) => { resolve(err.message); });
+        proc.unref();
+        resolve('');
+      });
     },
   );
 
