@@ -1,0 +1,39 @@
+---
+import { getCollection, render } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import { NAV, FLAT } from '../../config/nav';
+import Callout from '../../components/mdx/Callout.astro';
+import Keys from '../../components/mdx/Keys.astro';
+import KeyRow from '../../components/mdx/KeyRow.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs');
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+
+const currentHref = `/nexus-ide/docs/${entry.id}`;
+const idx = FLAT.findIndex((i) => i.href === currentHref);
+const prev = idx > 0 ? FLAT[idx - 1] : undefined;
+const next = idx >= 0 && idx < FLAT.length - 1 ? FLAT[idx + 1] : undefined;
+
+const group = NAV.find((g) => g.items.some((i) => i.href === currentHref))?.group ?? entry.data.group;
+---
+
+<DocsLayout
+  title={entry.data.title}
+  description={entry.data.lead}
+  group={group}
+  currentHref={currentHref}
+  headings={headings}
+  prev={prev}
+  next={next}
+>
+  <p class="lead">{entry.data.lead}</p>
+  <Content components={{ Callout, Keys, KeyRow }} />
+</DocsLayout>

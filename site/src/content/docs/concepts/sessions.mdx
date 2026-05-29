@@ -1,0 +1,39 @@
+---
+title: Runs & sessions
+lead: "A run is a dispatched task. A session is the live PTY terminal behind it. Understanding the split explains how telemetry and providers work."
+group: Core Concepts
+order: 4
+---
+
+## Runs vs sessions
+
+- A **run** is the unit you dispatch: a task description, a provider, and a bound worktree.
+- A **session** is the live **PTY terminal** that backs a run — a real shell process, not a simulated console.
+
+One run has one session. The run carries intent and status; the session carries the actual process and its output stream.
+
+## Real PTY terminals
+
+Sessions are genuine pseudo-terminals:
+
+- Rendered with **xterm.js** using its **WebGL** renderer for fast, smooth output.
+- Backed by **@lydell/node-pty** for the underlying process.
+- On Windows, the PTY runs over **ConPTY**, so TUIs and ANSI behave correctly.
+
+## Providers
+
+| Provider | Status |
+|----------|--------|
+| **Claude Code (CC)** | Available |
+| **Copilot (GH)** | Available |
+| **Codex (CX)** | Coming soon |
+| **Gemini (GM)** | Coming soon |
+| **Custom** | Coming soon |
+
+## PATH auto-detection
+
+Agent CLIs only work if Nexus can find them. It resolves PATH automatically:
+
+- On **Windows**, it reads the **Registry**; on macOS/Linux it derives PATH from a **login shell**.
+- It falls back to **dugite**'s bundled Git when a system Git isn't present.
+- It honors **`CLAUDE_CODE_GIT_BASH_PATH`** so Claude Code's Git Bash dependency resolves on Windows.

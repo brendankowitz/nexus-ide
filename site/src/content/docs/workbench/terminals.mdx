@@ -1,0 +1,37 @@
+---
+title: Sessions & agents
+lead: "Each run gets a live session — a real terminal with a header that tells you exactly what's running, where, and for how long."
+group: Workbench
+order: 3
+---
+
+## Session header
+
+Every session carries a header so you always know its context:
+
+- **Provider chip** — which agent is running (CC, GH, …).
+- **Agent** and **model** — e.g. the specific model parsed from output.
+- **Worktree** — the bound working directory.
+- **Elapsed time** — how long the run has been going.
+
+## Switching sessions
+
+A session strip lets you move between concurrent runs. **Right-click** a session to copy its details.
+
+## Shell auto-detection
+
+Sessions launch the right shell for the platform automatically:
+
+- **Windows** — prefers `pwsh`, falls back to `powershell`, then `cmd`.
+- **macOS / Linux** — uses your `$SHELL`.
+
+## Smart PTY sizing
+
+Nexus sizes the PTY to fit the rendered terminal, so TUI agents — including Ink-based UIs like Copilot — render correctly instead of wrapping or clipping.
+
+## Global pulse
+
+Aggregate activity surfaces in two always-visible places:
+
+- The **rail footer** — fleet-wide agent and worktree counts.
+- The **status bar** — the active project's live state.

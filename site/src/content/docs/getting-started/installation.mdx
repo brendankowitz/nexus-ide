@@ -1,0 +1,58 @@
+---
+title: Installation
+lead: "Nexus runs from source today. Clone the repo, install dependencies, and start the dev build — no system Git required, because dugite bundles it."
+group: Getting Started
+order: 2
+---
+
+## Prerequisites
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Node.js** | 20+ | LTS recommended. |
+| **npm** | 10+ | Ships with Node 20. |
+| **Agent CLI** | optional | Claude Code or Copilot — only needed when you actually launch a run. |
+
+<Callout type="note">
+You do **not** need a system Git install. Nexus bundles Git through **dugite**, so all branch, worktree, and history operations work out of the box.
+</Callout>
+
+## Development
+
+Clone the repository, install, and start the dev server. The dev build runs the Electron main process and the Vite-powered renderer with hot reload.
+
+```bash
+git clone https://github.com/brendankowitz/nexus-ide.git
+cd nexus-ide
+npm install
+npm run dev
+```
+
+## Building
+
+For type checks and a packaged build:
+
+```bash
+# Type-check the whole project
+npm run typecheck
+
+# Production build (main + renderer)
+npm run build
+
+# Package a Windows installer (NSIS)
+npm run package:win
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+<Callout type="tip">
+Run `npm run typecheck` before packaging — it catches IPC contract drift between the main and renderer processes that a plain `build` may not surface.
+</Callout>
+
+## Next
+
+With the app running, [add your first project and dispatch a run](/nexus-ide/docs/getting-started/first-project).

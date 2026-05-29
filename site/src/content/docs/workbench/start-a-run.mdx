@@ -1,0 +1,48 @@
+---
+title: Starting a run
+lead: "The run launcher is the Workbench's default surface. Describe a task, pick a provider, and dispatch — Nexus handles the worktree and session."
+group: Workbench
+order: 1
+---
+
+## The run launcher
+
+The launcher sits front and center in the Workbench. You write the task in plain language, choose how it runs, and hit **Start run**. Nexus creates an isolated worktree, opens a live session, and streams output.
+
+## Picking a provider
+
+A row of provider chips lets you choose per run — Claude Code, Copilot, and (soon) others. The same project can run different agents on different tasks. Dimmed chips are providers that aren't available yet.
+
+## Quick starts
+
+For common intents, one-click chips pre-frame the task:
+
+- **Fix a bug**
+- **Add a feature**
+- **Write tests**
+- **Investigate**
+- **Refactor**
+- **Document**
+
+## Task templates
+
+Reusable templates give you a structured starting point, tagged by kind:
+
+| Template kind | Tag |
+|---------------|-----|
+| Feature work | `feature` |
+| Test coverage | `test` |
+| Refactoring | `refactor` |
+| Bug fix | `bug` |
+
+## Set up this repo
+
+Before the first run, the launcher shows a readiness checklist for the selected repo:
+
+- **Branch detected** — the current branch is recognized.
+- **CLAUDE.md** — present at the repo root to orient agents.
+- **Worktrees configured** — isolated working directories are ready for parallel runs.
+
+<Callout type="tip">
+A populated **CLAUDE.md** measurably improves agent output. The launcher flags its absence so you don't dispatch a run blind.
+</Callout>

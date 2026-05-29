@@ -1,0 +1,29 @@
+---
+title: History
+lead: "Switch review to History to browse committed work — per-commit stats, readable timestamps, and detection of AI-authored commits."
+group: Review
+order: 4
+---
+
+## Browsing history
+
+The History view lists commits with the detail you need to triage them:
+
+- **Per-commit numstat** — added and removed line counts per file.
+- **Human-readable timestamps** — relative times, not raw epochs.
+- **HEAD, tags, and refs** — so you can see where each commit sits.
+
+## Drilling in
+
+Select any commit to open it in the **same inspection surface** you use for working changes — the identical hunk-by-hunk diff viewer, just scoped to that commit. No separate UI to learn.
+
+## AI-authored commits
+
+Nexus flags commits that were likely produced by an agent, using a heuristic combining:
+
+- **`Co-authored-by` trailers** that name an AI agent.
+- **Bot keyword** matching in the author and message.
+
+<Callout type="note">
+Detection is a heuristic, not a guarantee. It's meant to help you spot agent-authored history at a glance, not to serve as an audit trail.
+</Callout>

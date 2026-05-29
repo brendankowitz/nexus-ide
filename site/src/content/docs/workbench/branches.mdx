@@ -1,0 +1,29 @@
+---
+title: Branches & worktrees
+lead: "Full Git branch and worktree management without leaving Nexus — all powered by dugite, so no system Git is required."
+group: Workbench
+order: 5
+---
+
+## Branch operations
+
+Nexus exposes a complete set of branch operations:
+
+- **List** local and remote branches
+- **Checkout**, **create**, **rename**, and **delete** branches
+- **Fetch**, **pull**, and **push**
+- Push with **`--force-with-lease`**
+- **Set** and **unset** upstream tracking
+- **Checkout a remote** branch into a local tracking branch
+
+## Worktree grid
+
+A worktree grid shows the working directories attached to the project. From it you can **create** a new worktree (auto-creating its branch) or **remove** one you're done with.
+
+## Powered by dugite
+
+Every operation runs through **dugite**, which bundles Git with the app. That means branch and worktree management works identically whether or not the user has Git installed system-wide.
+
+<Callout type="warn">
+`--force-with-lease` is the safe force push: it aborts if the remote moved since you last fetched. Use it instead of `--force` so you never clobber a teammate's — or an agent's — pushed work.
+</Callout>

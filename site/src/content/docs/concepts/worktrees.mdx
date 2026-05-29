@@ -1,0 +1,35 @@
+---
+title: Worktrees & branches
+lead: "Worktrees are how Nexus runs multiple agents against one repo without stashing or stepping on each other. Each run binds to its own working directory."
+group: Core Concepts
+order: 3
+---
+
+## Why worktrees
+
+Git worktrees let one repository have **multiple working directories**, each on its own branch. Nexus leans on this hard: it means you can run **parallel agents** on the same repo without stashing changes, swapping branches, or cloning the repo five times.
+
+## Runs bind to worktrees
+
+When you start a run, Nexus binds it to a worktree. Concurrent runs land in separate worktrees, so two agents working the same repo never collide on a single working directory.
+
+## Creating worktrees
+
+Creating a worktree **auto-creates its branch** if one doesn't exist, so you go from "I want a clean space for this run" to a bound, isolated worktree in a single action.
+
+## Branch operations
+
+Nexus exposes the full set of branch operations, all powered by dugite:
+
+- Checkout an existing branch
+- Create a new branch
+- Rename a branch
+- Delete a branch
+- Fetch from remote
+- Pull
+- Push
+- Push with `--force-with-lease`
+
+<Callout type="warn">
+Prefer `--force-with-lease` over a plain force push. It refuses to overwrite remote work you haven't seen, which is exactly the protection you want when agents are pushing branches.
+</Callout>

@@ -1,0 +1,497 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import NexusMark from '../components/NexusMark.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const docsHref = `${base}/docs/getting-started/introduction`;
+const githubHref = 'https://github.com/brendankowitz/nexus-ide';
+---
+<BaseLayout
+  title="Nexus IDE — Command the swarm, not the windows"
+  description="A desktop command center for AI-assisted engineering. Dispatch tasks to Claude Code or Copilot in isolated worktrees and review what comes back — across every repo, from one pane."
+>
+  <!-- NAV -->
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top">
+        <NexusMark size={26} gradientId="nxw-nav" />
+        <span class="word">Nexus</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#providers">Providers</a>
+        <a href="#quickstart">Quick start</a>
+        <a href={docsHref}>Docs</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="nav-gh" href={githubHref} aria-label="GitHub repository">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap">
+        <div class="eyebrow"><span class="pulse"></span> Developer Mission Control</div>
+        <h1 class="hero-title">Command the <span class="accent">swarm</span>,<br />not the windows.</h1>
+        <p class="lede">
+          A desktop command center for AI-assisted engineering. Describe a task, dispatch it to
+          Claude Code or Copilot in an isolated worktree, and review what comes back — across every
+          repo, from one pane. Not an editor. A mission control that sits beside it.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href={docsHref}>Read the docs →</a>
+          <a class="btn btn-ghost" href={githubHref}>View on GitHub</a>
+        </div>
+        <p class="hero-meta">
+          <span>✓ MIT licensed</span><span class="dot">·</span>
+          <span>✓ Electron · React 19</span><span class="dot">·</span>
+          <span>✓ Windows · macOS · Linux</span>
+        </p>
+      </div>
+
+      <!-- APP MOCK -->
+      <div class="wrap">
+        <div class="mock" aria-hidden="true">
+          <div class="mock-os">
+            <span class="osdot red"></span><span class="osdot yellow"></span><span class="osdot green"></span>
+          </div>
+          <div class="mock-topbar">
+            <div class="mt-brand">
+              <NexusMark size={18} gradientId="nxw-mock" />
+              <span class="mt-word">NEXUS</span>
+            </div>
+            <div class="mt-tabs">
+              <span class="mt-tab active">Workbench</span>
+              <span class="mt-tab">Review</span>
+            </div>
+            <div class="mt-search">⌘K  Search projects, runs…</div>
+          </div>
+          <div class="mock-body">
+            <aside class="mock-rail">
+              <p class="mr-label">Projects</p>
+              <div class="mr-item active">
+                <span class="mr-name">web-dashboard</span>
+                <span class="mr-meta">feature/upload-flow</span>
+                <span class="mr-badges"><i class="b-dirty">4</i><i class="b-wt">1wt</i><i class="b-ag">1ag</i></span>
+              </div>
+              <div class="mr-item">
+                <span class="mr-name">api-gateway</span>
+                <span class="mr-meta">main</span>
+                <span class="mr-badges"><i class="b-wt">2wt</i></span>
+              </div>
+              <div class="mr-item">
+                <span class="mr-name">infra-terraform</span>
+                <span class="mr-meta">main</span>
+                <span class="mr-badges"><i class="b-dirty">1</i></span>
+              </div>
+              <div class="mr-item">
+                <span class="mr-name">mobile-app</span>
+                <span class="mr-meta">release/2.4</span>
+                <span class="mr-badges"><i class="b-ag">2ag</i></span>
+              </div>
+              <div class="mr-item">
+                <span class="mr-name">design-system</span>
+                <span class="mr-meta">main</span>
+              </div>
+            </aside>
+            <section class="mock-main">
+              <div class="run-card">
+                <p class="rc-label">Start a run · <span class="rc-repo">web-dashboard</span></p>
+                <div class="rc-input">Add retry logic to the file upload flow with exponential backoff…</div>
+                <div class="rc-row">
+                  <div class="rc-chips">
+                    <span class="chip chip-cc">CC</span>
+                    <span class="chip chip-gh">GH</span>
+                    <span class="chip chip-cx">CX</span>
+                    <span class="chip chip-gm">GM</span>
+                    <span class="chip chip-more">··</span>
+                  </div>
+                  <span class="rc-start">Start run →</span>
+                </div>
+                <div class="rc-quick">
+                  <span class="qchip">Fix a bug</span>
+                  <span class="qchip">Add a feature</span>
+                  <span class="qchip">Write tests</span>
+                  <span class="qchip">Refactor</span>
+                </div>
+              </div>
+              <div class="tpl-grid">
+                <div class="tpl-card">
+                  <span class="tpl-tag tag-feature">feature</span>
+                  <p class="tpl-title">Implement endpoint</p>
+                  <p class="tpl-desc">Scaffold a REST handler with validation and tests.</p>
+                </div>
+                <div class="tpl-card">
+                  <span class="tpl-tag tag-test">test</span>
+                  <p class="tpl-title">Cover edge cases</p>
+                  <p class="tpl-desc">Add unit tests for the upload retry path.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="mock-status">
+            <span>web-dashboard · feature/upload-flow</span>
+            <span class="st-right"><i class="st-live">● LIVE</i> · 1 agent · cpu 17%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="problem">
+      <div class="wrap">
+        <blockquote class="big-quote">
+          AI agents are <em>fast</em>. Window-juggling is the bottleneck.
+        </blockquote>
+        <div class="pains">
+          <div class="pain"><span class="x">✗</span><div><strong>Context switching kills flow</strong><p>Alt-tabbing between terminals, editors, and browser tabs destroys the focus an agent run depends on.</p></div></div>
+          <div class="pain"><span class="x">✗</span><div><strong>One terminal per agent per repo</strong><p>Five repos, three agents each — that's fifteen windows you're supposed to track in your head.</p></div></div>
+          <div class="pain"><span class="x">✗</span><div><strong>You can't review what you can't find</strong><p>Diffs scattered across worktrees mean changes slip through unreviewed.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="features">
+      <div class="wrap">
+        <p class="kicker">Features</p>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h2>Start a run</h2>
+            <p>Describe the task in plain language, pick a provider, and Nexus spins up an isolated worktree and drops you into a live session — reviewing in minutes, not after a manual branch dance.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="fv-card">
+              <p class="fv-mini-label">Start a run</p>
+              <div class="fv-input">Add retry logic with exponential backoff…</div>
+              <div class="fv-chips"><span class="chip chip-cc">CC</span><span class="chip chip-gh">GH</span><span class="chip chip-cx">CX</span><span class="fv-go">Start run →</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature reverse">
+          <div class="feature-text">
+            <h2>Project Rail</h2>
+            <p>Switch repos in one click. Every entry shows live git state — current branch, dirty file count, worktree count, and how many agents are running — so the whole fleet is legible at a glance.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="fv-rail">
+              <div class="fvr-item active"><span>web-dashboard</span><span class="fvr-b">4 · 1wt · 1ag</span></div>
+              <div class="fvr-item"><span>api-gateway</span><span class="fvr-b">2wt</span></div>
+              <div class="fvr-item"><span>infra-terraform</span><span class="fvr-b">1</span></div>
+              <div class="fvr-item"><span>mobile-app</span><span class="fvr-b">2ag</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h2>Live telemetry</h2>
+            <p>Agent status is parsed straight from terminal output — no API calls, no polling endpoints. Model, live/idle state, elapsed time, and CPU surface in the rail and status bar.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="fv-tele">
+              <div class="tele-row"><span class="tele-name">claude-code</span><span class="tele-bar"><i style="width:78%"></i></span><span class="tele-pct">live</span></div>
+              <div class="tele-row"><span class="tele-name">copilot</span><span class="tele-bar"><i style="width:42%"></i></span><span class="tele-pct">idle</span></div>
+              <div class="tele-row"><span class="tele-name">cpu</span><span class="tele-bar"><i style="width:17%"></i></span><span class="tele-pct">17%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature reverse">
+          <div class="feature-text">
+            <h2>Code Review</h2>
+            <p>Move through an agent's changed files hunk by hunk. Approve &amp; Next keeps you in flow; <kbd>J</kbd> <kbd>K</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>S</kbd> <kbd>N</kbd> drives the queue without leaving the keyboard.</p>
+          </div>
+          <div class="feature-visual">
+            <div class="fv-diff">
+              <pre><code><span class="d-ctx"> function upload(file) {'{'}</span>
+<span class="d-del">-  return fetch(url, opts);</span>
+<span class="d-add">+  return retry(() =&gt; fetch(url, opts), {'{'}</span>
+<span class="d-add">+    attempts: 5, backoff: 'exp',</span>
+<span class="d-add">+  {'}'});</span>
+<span class="d-ctx"> {'}'}</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROVIDERS -->
+    <section id="providers" class="providers">
+      <div class="wrap">
+        <p class="kicker">Providers</p>
+        <h2 class="sec-title">Bring your own agent</h2>
+        <div class="prov-grid">
+          <div class="prov-card">
+            <span class="chip chip-cc lg">CC</span>
+            <h3>Claude Code</h3>
+            <p>First-class. Model and live status parsed from output.</p>
+            <span class="prov-status on">● Available</span>
+          </div>
+          <div class="prov-card">
+            <span class="chip chip-gh lg">GH</span>
+            <h3>Copilot</h3>
+            <p>Full TUI rendering. Smart PTY sizing so the Ink-based UI renders correctly.</p>
+            <span class="prov-status on">● Available</span>
+          </div>
+          <div class="prov-card">
+            <span class="chip chip-cx lg">CX</span>
+            <h3>Codex</h3>
+            <p>OpenAI's CLI agent, coming as a run provider.</p>
+            <span class="prov-status off">○ Coming soon</span>
+          </div>
+          <div class="prov-card">
+            <span class="chip chip-gm lg">GM</span>
+            <h3>Gemini</h3>
+            <p>Google's CLI agent.</p>
+            <span class="prov-status off">○ Coming soon</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart" class="quickstart">
+      <div class="wrap qs-inner">
+        <div class="qs-text">
+          <p class="kicker">Quick start</p>
+          <h2 class="sec-title">Running in three commands</h2>
+          <ul class="qs-prereq">
+            <li><strong>Node 20+</strong> and <strong>npm 10+</strong></li>
+            <li>An agent CLI (Claude Code or Copilot) — optional to start</li>
+            <li>No system Git needed — dugite bundles it</li>
+          </ul>
+        </div>
+        <div class="qs-term">
+          <div class="qst-bar"><span class="osdot red"></span><span class="osdot yellow"></span><span class="osdot green"></span></div>
+          <pre><code><span class="c-cmt"># 1. Clone</span>
+<span class="c-pr">$</span> git clone https://github.com/brendankowitz/nexus-ide.git
+<span class="c-pr">$</span> cd nexus-ide
+<span class="c-cmt"># 2. Install</span>
+<span class="c-pr">$</span> npm install
+<span class="c-cmt"># 3. Start</span>
+<span class="c-pr">$</span> npm run dev</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA BAND -->
+    <section class="cta-band">
+      <div class="wrap cta-inner">
+        <h2>Ready to command the swarm?</h2>
+        <a class="btn btn-primary" href={docsHref}>Read the docs →</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top">
+          <NexusMark size={26} gradientId="nxw-foot" />
+          <span class="word">Nexus</span>
+        </a>
+        <p>Developer mission control for AI-assisted engineering. MIT licensed.</p>
+      </div>
+      <div class="foot-col">
+        <p class="fc-label">Docs</p>
+        <a href={`${base}/docs/getting-started/introduction`}>Introduction</a>
+        <a href={`${base}/docs/getting-started/installation`}>Installation</a>
+        <a href={`${base}/docs/workbench/start-a-run`}>Workbench</a>
+        <a href={`${base}/docs/review/diff-viewer`}>Review</a>
+      </div>
+      <div class="foot-col">
+        <p class="fc-label">Reference</p>
+        <a href={`${base}/docs/reference/providers`}>Providers</a>
+        <a href={`${base}/docs/reference/shortcuts`}>Shortcuts</a>
+        <a href={`${base}/docs/reference/configuration`}>Configuration</a>
+        <a href={`${base}/docs/reference/architecture`}>Architecture</a>
+      </div>
+      <div class="foot-col">
+        <p class="fc-label">Project</p>
+        <a href={githubHref}>GitHub</a>
+        <a href={`${githubHref}/issues`}>Issues</a>
+        <a href={`${githubHref}/releases`}>Releases</a>
+      </div>
+    </div>
+    <div class="wrap foot-base">
+      © 2025–2026 Nexus IDE · MIT License · Built with Astro
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  /* NAV */
+  .nav { position: sticky; top: 0; z-index: 100; background: rgba(10,12,15,0.78); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+  .nav-inner { display: flex; align-items: center; gap: 28px; height: 60px; }
+  .nav-links { display: flex; gap: 26px; margin-left: 14px; }
+  .nav-links a { color: var(--ink-dim); font-size: 14px; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .nav-gh { color: var(--ink-dim); display: inline-flex; }
+  .nav-gh:hover { color: var(--ink); }
+
+  /* HERO */
+  .hero { padding: 88px 0 40px; text-align: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); border: 1px solid var(--border-2); border-radius: 999px; padding: 6px 14px; background: var(--bg-1); }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(72,211,154,0.6); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(72,211,154,0.5); } 70% { box-shadow: 0 0 0 8px rgba(72,211,154,0); } 100% { box-shadow: 0 0 0 0 rgba(72,211,154,0); } }
+  .hero-title { font-family: var(--serif); font-size: clamp(40px, 7vw, 68px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; margin: 26px 0 0; }
+  .hero-title .accent { color: var(--cyan); font-style: italic; }
+  .lede { max-width: 680px; margin: 24px auto 0; font-size: 19px; line-height: 1.6; color: var(--ink-dim); }
+  .hero-cta { display: flex; gap: 14px; justify-content: center; margin: 32px 0 0; flex-wrap: wrap; }
+  .hero-meta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 26px 0 0; font-size: 13px; color: var(--ink-faint); font-family: var(--mono); }
+  .hero-meta .dot { color: var(--ink-ghost); }
+
+  /* APP MOCK */
+  .mock { margin: 56px auto 0; max-width: 1040px; text-align: left; border: 1px solid var(--border-2); border-radius: 14px; overflow: hidden; background: var(--bg-1); box-shadow: 0 40px 120px -40px rgba(0,0,0,0.8); }
+  .mock-os { display: flex; gap: 7px; padding: 12px 16px; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+  .osdot { width: 11px; height: 11px; border-radius: 50%; }
+  .osdot.red { background: #ec6a5e; } .osdot.yellow { background: #f4be4f; } .osdot.green { background: #61c554; }
+  .mock-topbar { display: flex; align-items: center; gap: 18px; padding: 9px 16px; border-bottom: 1px solid var(--border); background: var(--bg-1); }
+  .mt-brand { display: flex; align-items: center; gap: 8px; }
+  .mt-word { font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; color: var(--ink); }
+  .mt-tabs { display: flex; gap: 4px; }
+  .mt-tab { font-size: 12px; color: var(--ink-faint); padding: 4px 11px; border-radius: 6px; }
+  .mt-tab.active { color: var(--ink); background: var(--bg-3); }
+  .mt-search { margin-left: auto; font-size: 12px; color: var(--ink-faint); background: var(--bg-2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; min-width: 260px; }
+  .mock-body { display: grid; grid-template-columns: 220px 1fr; min-height: 320px; }
+  .mock-rail { border-right: 1px solid var(--border); padding: 14px 12px; }
+  .mr-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 10px; padding-left: 6px; }
+  .mr-item { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; margin-bottom: 3px; }
+  .mr-item.active { background: var(--bg-3); }
+  .mr-name { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .mr-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+  .mr-badges { display: flex; gap: 5px; margin-top: 3px; }
+  .mr-badges i { font-style: normal; font-family: var(--mono); font-size: 9.5px; padding: 1px 5px; border-radius: 4px; }
+  .b-dirty { background: rgba(217,119,87,0.16); color: var(--terra-soft); }
+  .b-wt { background: rgba(124,140,255,0.16); color: var(--indigo); }
+  .b-ag { background: rgba(72,211,154,0.16); color: var(--green); }
+  .mock-main { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .run-card { border: 1px solid var(--border-2); border-radius: 10px; padding: 16px; background: var(--bg); }
+  .rc-label { font-size: 12px; color: var(--ink-faint); margin: 0 0 10px; }
+  .rc-repo { color: var(--cyan); }
+  .rc-input { font-size: 13.5px; color: var(--ink-dim); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--bg-1); }
+  .rc-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .rc-chips, .fv-chips { display: flex; gap: 6px; align-items: center; }
+  .chip { font-family: var(--mono); font-size: 11px; font-weight: 600; width: 26px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; }
+  .chip.lg { width: 38px; height: 30px; font-size: 13px; }
+  .chip-cc { background: rgba(217,119,87,0.18); color: var(--terra-soft); }
+  .chip-gh { background: rgba(124,140,255,0.18); color: var(--indigo); }
+  .chip-cx { background: rgba(72,211,154,0.18); color: var(--green); }
+  .chip-gm { background: rgba(74,144,255,0.18); color: #6fa8ff; }
+  .chip-more { background: var(--bg-3); color: var(--ink-faint); }
+  .rc-start, .fv-go { font-size: 12.5px; font-weight: 600; color: #1a0f0a; background: var(--terra); padding: 7px 13px; border-radius: 7px; }
+  .rc-quick { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+  .qchip { font-size: 11.5px; color: var(--ink-dim); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; }
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tpl-card { border: 1px solid var(--border); border-radius: 9px; padding: 13px; background: var(--bg-1); }
+  .tpl-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+  .tag-feature { background: rgba(124,140,255,0.16); color: var(--indigo); }
+  .tag-test { background: rgba(72,211,154,0.16); color: var(--green); }
+  .tpl-title { font-size: 13.5px; color: var(--ink); font-weight: 500; margin: 9px 0 4px; }
+  .tpl-desc { font-size: 12px; color: var(--ink-faint); margin: 0; }
+  .mock-status { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); padding: 8px 16px; border-top: 1px solid var(--border); background: var(--bg-2); }
+  .st-live { font-style: normal; color: var(--green); }
+
+  /* PROBLEM */
+  .problem { padding: 96px 0; border-top: 1px solid var(--border); }
+  .big-quote { font-family: var(--serif); font-size: clamp(28px, 4.5vw, 44px); font-weight: 600; line-height: 1.18; margin: 0 0 56px; max-width: 880px; }
+  .big-quote em { color: var(--cyan); font-style: italic; }
+  .pains { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .pain { display: flex; gap: 14px; }
+  .pain .x { color: var(--red); font-size: 18px; line-height: 1.4; }
+  .pain strong { display: block; color: var(--ink); margin-bottom: 6px; }
+  .pain p { color: var(--ink-faint); font-size: 14px; margin: 0; line-height: 1.6; }
+
+  /* FEATURES */
+  .features { padding: 40px 0 96px; }
+  .feature { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 48px 0; }
+  .feature.reverse .feature-text { order: 2; }
+  .feature h2 { font-family: var(--serif); font-size: 32px; margin-bottom: 14px; }
+  .feature-text p { color: var(--ink-dim); font-size: 16px; line-height: 1.7; }
+  .feature-visual { background: var(--bg-1); border: 1px solid var(--border-2); border-radius: 12px; padding: 22px; }
+  .fv-mini-label { font-size: 11px; color: var(--ink-faint); margin: 0 0 10px; }
+  .fv-input { font-size: 13px; color: var(--ink-dim); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; background: var(--bg); margin-bottom: 12px; }
+  .fv-chips { justify-content: flex-start; }
+  .fv-go { margin-left: auto; }
+  .fv-rail { display: flex; flex-direction: column; gap: 6px; }
+  .fvr-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-dim); padding: 10px 12px; border-radius: 8px; border: 1px solid transparent; }
+  .fvr-item.active { background: var(--bg-3); border-color: var(--border-2); color: var(--ink); }
+  .fvr-b { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
+  .fv-tele { display: flex; flex-direction: column; gap: 14px; }
+  .tele-row { display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 12px; }
+  .tele-name { width: 92px; color: var(--ink-dim); }
+  .tele-bar { flex: 1; height: 8px; background: var(--bg-3); border-radius: 999px; overflow: hidden; }
+  .tele-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
+  .tele-pct { width: 38px; text-align: right; color: var(--ink-faint); }
+  .fv-diff pre { margin: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow-x: auto; }
+  .fv-diff code { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; }
+  .d-ctx { color: var(--ink-faint); }
+  .d-add { color: var(--green); background: rgba(72,211,154,0.08); display: block; }
+  .d-del { color: var(--red); background: rgba(226,104,95,0.08); display: block; }
+
+  /* PROVIDERS */
+  .providers { padding: 88px 0; border-top: 1px solid var(--border); }
+  .sec-title { font-family: var(--serif); font-size: 34px; margin: 8px 0 36px; }
+  .prov-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .prov-card { border: 1px solid var(--border-2); border-radius: 12px; padding: 22px; background: var(--bg-1); }
+  .prov-card h3 { font-size: 17px; margin: 14px 0 8px; }
+  .prov-card p { font-size: 13.5px; color: var(--ink-faint); line-height: 1.6; margin: 0 0 16px; min-height: 60px; }
+  .prov-status { font-family: var(--mono); font-size: 11.5px; }
+  .prov-status.on { color: var(--green); }
+  .prov-status.off { color: var(--ink-faint); }
+
+  /* QUICK START */
+  .quickstart { padding: 88px 0; border-top: 1px solid var(--border); }
+  .qs-inner { display: grid; grid-template-columns: 1fr 1.1fr; gap: 56px; align-items: center; }
+  .qs-prereq { list-style: none; padding: 0; margin: 20px 0 0; }
+  .qs-prereq li { color: var(--ink-dim); font-size: 15px; padding: 7px 0 7px 26px; position: relative; }
+  .qs-prereq li::before { content: "✓"; position: absolute; left: 0; color: var(--green); }
+  .qs-term { border: 1px solid var(--border-2); border-radius: 12px; overflow: hidden; background: #0c0e12; }
+  .qst-bar { display: flex; gap: 7px; padding: 11px 14px; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+  .qs-term pre { margin: 0; padding: 18px 20px; overflow-x: auto; }
+  .qs-term code { font-family: var(--mono); font-size: 13px; line-height: 1.9; color: var(--ink); }
+  .c-cmt { color: var(--ink-faint); }
+  .c-pr { color: var(--cyan); }
+
+  /* CTA BAND */
+  .cta-band { padding: 80px 0; border-top: 1px solid var(--border); }
+  .cta-inner { display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
+  .cta-band h2 { font-family: var(--serif); font-size: 32px; }
+
+  /* FOOTER */
+  .footer { border-top: 1px solid var(--border); padding: 56px 0 36px; background: var(--bg-1); }
+  .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 36px; }
+  .foot-brand p { color: var(--ink-faint); font-size: 14px; max-width: 280px; margin: 14px 0 0; line-height: 1.6; }
+  .foot-col { display: flex; flex-direction: column; gap: 9px; }
+  .fc-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 4px; }
+  .foot-col a { color: var(--ink-dim); font-size: 14px; }
+  .foot-col a:hover { color: var(--ink); }
+  .foot-base { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; color: var(--ink-faint); font-family: var(--mono); }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .mock-body { grid-template-columns: 1fr; }
+    .mock-rail { display: none; }
+    .pains { grid-template-columns: 1fr; gap: 22px; }
+    .feature { grid-template-columns: 1fr; gap: 28px; }
+    .feature.reverse .feature-text { order: 0; }
+    .prov-grid { grid-template-columns: 1fr 1fr; }
+    .qs-inner { grid-template-columns: 1fr; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .prov-grid { grid-template-columns: 1fr; }
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+</style>

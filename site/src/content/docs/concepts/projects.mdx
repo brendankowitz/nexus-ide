@@ -1,0 +1,30 @@
+---
+title: Projects & groups
+lead: "A project is a registered Git repository with live state. Groups organize projects into the fleet you actually work across."
+group: Core Concepts
+order: 2
+---
+
+## What a project is
+
+A project is a Git repository you've registered with Nexus. Each one carries **live git state** that updates as you and your agents work — current branch, dirty file count, worktree count, and active agent count.
+
+## Live git state
+
+State is watched, not polled. Nexus uses **@parcel/watcher** for filesystem events — on Windows that means **ReadDirectoryChangesW** under the hood — so changes appear in the rail near-instantly without a CPU-burning poll loop.
+
+## Groups
+
+Projects can be organized into groups. You can:
+
+- **Create**, **rename**, and **delete** groups.
+- **Collapse** a group to reduce rail density.
+- **Drag** projects to reorder them or move them between groups.
+
+## Directory scanning
+
+Rather than adding repos one at a time, point Nexus at a parent directory. It scans **three levels deep** and registers every Git repo it finds, **skipping `node_modules`** so large workspaces stay quick to import.
+
+## Persistence
+
+Project and group configuration persists via **electron-store**. On Windows, sensitive values are encrypted at rest using **DPAPI** through Electron's `safeStorage`.
